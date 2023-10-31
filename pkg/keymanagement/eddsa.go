@@ -1,14 +1,112 @@
 package keymanagement
 
 import (
+	"bufio"
 	"crypto/ecdsa"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 const edDSAGenerationMessage = "Signing this message generates your EdDSA private key. Only do this on pages you trust to manage your zkCertificates."
 
-func GetEdDSAKeyFromEthereumSigner(privateKey *ecdsa.PrivateKey) ([]byte, error) {
+func GetEdDSAKeyFromEthereumPrivateKey(privateKey *ecdsa.PrivateKey) (babyjub.PrivateKey, error) {
 	hash := crypto.Keccak256Hash([]byte(edDSAGenerationMessage))
-	return crypto.Sign(hash.Bytes(), privateKey)
+
+	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	if err != nil {
+		return babyjub.PrivateKey{}, fmt.Errorf("sign message: %w", err)
+	}
+
+	return babyjub.PrivateKey(signature), err
+}
+
+// LoadEdDSA loads a Baby Jubjub private key from the given file.
+//
+// Source: https://github.com/ethereum/go-ethereum/blob/285202aae2a580b82f30ebd909c1819b22d90066/crypto/crypto.go#L194
+func LoadEdDSA(file string) (babyjub.PrivateKey, error) {
+	fd, err := os.Open(file)
+	if err != nil {
+		return babyjub.PrivateKey{}, err
+	}
+	defer fd.Close()
+
+	r := bufio.NewReader(fd)
+	buf := make([]byte, 64)
+	n, err := readASCII(buf, r)
+	if err != nil {
+		return babyjub.PrivateKey{}, err
+	} else if n != len(buf) {
+		return babyjub.PrivateKey{}, errors.New("key file too short, want 64 hex characters")
+	}
+	if err := checkKeyFileEnd(r); err != nil {
+		return babyjub.PrivateKey{}, err
+	}
+
+	res := make([]byte, hex.DecodedLen(len(buf)))
+
+	var byteErr hex.InvalidByteError
+	if _, err = hex.Decode(res, buf); errors.As(err, &byteErr) {
+		return babyjub.PrivateKey{}, fmt.Errorf("invalid hex character %q in private key", byte(byteErr))
+	} else if err != nil {
+		return babyjub.PrivateKey{}, errors.New("invalid hex data for private key")
+	}
+
+	return babyjub.PrivateKey(res), nil
+}
+
+// readASCII reads into 'buf', stopping when the buffer is full or
+// when a non-printable control character is encountered.
+//
+// Source: https://github.com/ethereum/go-ethereum/blob/285202aae2a580b82f30ebd909c1819b22d90066/crypto/crypto.go#L218
+func readASCII(buf []byte, r io.ByteReader) (n int, err error) {
+	for ; n < len(buf); n++ {
+		buf[n], err = r.ReadByte()
+		switch {
+		case errors.Is(err, io.EOF) || buf[n] < '!':
+			return n, nil
+		case err != nil:
+			return n, err
+		}
+	}
+	return n, nil
+}
+
+// checkKeyFileEnd skips over additional newlines at the end of a key file.
+//
+// Source: https://github.com/ethereum/go-ethereum/blob/285202aae2a580b82f30ebd909c1819b22d90066/crypto/crypto.go#L232
+func checkKeyFileEnd(r io.ByteReader) error {
+	for i := 0; ; i++ {
+		b, err := r.ReadByte()
+		switch {
+		case errors.Is(err, io.EOF):
+			return nil
+		case err != nil:
+			return err
+		case b != '\n' && b != '\r':
+			return fmt.Errorf("invalid character %q at end of key file", b)
+		case i >= 2:
+			return errors.New("key file too long, want 64 hex characters")
+		}
+	}
+}
+
+// SaveEdDSA saves a Baby Jubjub private key to the given file with
+// restrictive permissions. The key data is saved hex-encoded.
+//
+// Source: https://github.com/ethereum/go-ethereum/blob/285202aae2a580b82f30ebd909c1819b22d90066/crypto/crypto.go#L250
+func SaveEdDSA(file string, key babyjub.PrivateKey) error {
+	fd, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+
+	_, err = hex.NewEncoder(fd).Write(key[:])
+	return err
 }
