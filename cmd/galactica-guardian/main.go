@@ -16,8 +16,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package main
 
-import "github.com/galactica-corp/guardians-sdk/cmd"
+import (
+	"os"
+
+	"github.com/galactica-corp/guardians-sdk/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.NewRootCmd().Execute(); err != nil {
+		os.Exit(1)
+	}
 }

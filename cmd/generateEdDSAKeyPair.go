@@ -27,16 +27,18 @@ import (
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"
 )
 
-var (
+type generateEdDSAKeyPairFlags struct {
 	privateKeyPath string
 	outputFilePath string
-)
+}
 
-// generateEdDSAKeyPairCmd represents the generateEdDSAKeyPair command
-var generateEdDSAKeyPairCmd = &cobra.Command{
-	Use:   "generateEdDSAKeyPair",
-	Short: "Generate EdDSA key pairs for managing zero knowledge certificates",
-	Long: `The generateEdDSAKeyPair command allows you to generate EdDSA key pairs used for
+func NewCmdGenerateEdDSAKeyPair() *cobra.Command {
+	var f generateEdDSAKeyPairFlags
+
+	cmd := &cobra.Command{
+		Use:   "generateEdDSAKeyPair",
+		Short: "Generate EdDSA key pairs for managing zero knowledge certificates",
+		Long: `The generateEdDSAKeyPair command allows you to generate EdDSA key pairs used for
 managing zero knowledge certificates. EdDSA keys are essential for signing and
 verifying data in Zero-Knowledge (ZK) circuits. This command provides the
 flexibility to generate these key pairs, either by deriving them from an
@@ -49,10 +51,20 @@ specified output file.
 
 Example Usage:
 $ galactica-guardian generateEdDSAKeyPair -k /path/to/ethereum-key.hex -o /path/to/output.hex`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: generateEdDSAKeyPair(&f),
+	}
+
+	cmd.Flags().StringVarP(&f.privateKeyPath, "private-key-file", "k", "", "path to a file containing a hex-encoded Ethereum (ECDSA) private key")
+	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "eddsa-private-key.hex", "path to a file where generated private key should be saved")
+
+	return cmd
+}
+
+func generateEdDSAKeyPair(f *generateEdDSAKeyPairFlags) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
 		var privateKey babyjub.PrivateKey
-		if privateKeyPath != "" {
-			ethereumPrivateKey, err := crypto.LoadECDSA(privateKeyPath)
+		if f.privateKeyPath != "" {
+			ethereumPrivateKey, err := crypto.LoadECDSA(f.privateKeyPath)
 			if err != nil {
 				return fmt.Errorf("load ethereum private key: %w", err)
 			}
@@ -65,21 +77,14 @@ $ galactica-guardian generateEdDSAKeyPair -k /path/to/ethereum-key.hex -o /path/
 			privateKey = babyjub.NewRandPrivKey()
 		}
 
-		if err := keymanagement.SaveEdDSA(outputFilePath, privateKey); err != nil {
+		if err := keymanagement.SaveEdDSA(f.outputFilePath, privateKey); err != nil {
 			return fmt.Errorf("save eddsa private key: %w", err)
 		}
-		fmt.Println("Saved EdDSA private key to", outputFilePath)
+		fmt.Println("Saved EdDSA private key to", f.outputFilePath)
 
 		publicKey := privateKey.Public()
 		fmt.Println("EdDSA public key", publicKey.X, publicKey.Y)
 
 		return nil
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(generateEdDSAKeyPairCmd)
-
-	generateEdDSAKeyPairCmd.Flags().StringVarP(&privateKeyPath, "private-key-file", "k", "", "path to a file containing a hex-encoded Ethereum (ECDSA) private key")
-	generateEdDSAKeyPairCmd.Flags().StringVarP(&outputFilePath, "output-file", "o", "eddsa-private-key.hex", "path to a file where generated private key should be saved")
+	}
 }

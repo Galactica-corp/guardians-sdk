@@ -18,16 +18,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "galactica-guardian",
-	Short: "galactica-guardian is a CLI tool for managing and verifying user data on the Galactica blockchain",
-	Long: `galactica-guardian is a powerful command-line interface (CLI) tool designed for
+func NewRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "galactica-guardian",
+		Short: "galactica-guardian is a CLI tool for managing and verifying user data on the Galactica blockchain",
+		Long: `galactica-guardian is a powerful command-line interface (CLI) tool designed for
 guardians in the Galactica blockchain ecosystem. Guardians play a pivotal role
 in verifying and managing user data on the blockchain. 
 
@@ -46,16 +44,10 @@ ecosystem.
 For detailed usage instructions, available commands, and options, please refer
 to the respective sections in the documentation.
 `,
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
 	}
-}
 
-func init() {
+	cmd.AddCommand(NewCmdGenerateEdDSAKeyPair())
+	cmd.AddCommand(NewCmdCreateZKCert())
+
+	return cmd
 }
