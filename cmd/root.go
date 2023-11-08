@@ -18,6 +18,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -50,4 +54,32 @@ to the respective sections in the documentation.
 	cmd.AddCommand(NewCmdCreateZKCert())
 
 	return cmd
+}
+
+func encodeToJSONFile(filePath string, target any) error {
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(target); err != nil {
+		return fmt.Errorf("encode json: %w", err)
+	}
+
+	return nil
+}
+
+func decodeJSONFile(filePath string, target any) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	if err := json.NewDecoder(f).Decode(target); err != nil {
+		return fmt.Errorf("decode json: %w", err)
+	}
+
+	return nil
 }
