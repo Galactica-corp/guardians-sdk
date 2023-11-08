@@ -69,7 +69,7 @@ func generateEdDSAKeyPair(f *generateEdDSAKeyPairFlags) func(cmd *cobra.Command,
 				return fmt.Errorf("load ethereum private key: %w", err)
 			}
 
-			privateKey, err = keymanagement.GetEdDSAKeyFromEthereumPrivateKey(ethereumPrivateKey)
+			privateKey, err = keymanagement.DeriveEdDSAKeyFromEthereumPrivateKey(ethereumPrivateKey)
 			if err != nil {
 				return fmt.Errorf("derive eddsa key: %w", err)
 			}

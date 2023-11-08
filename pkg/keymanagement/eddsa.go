@@ -15,10 +15,10 @@ import (
 
 const edDSAGenerationMessage = "Signing this message generates your EdDSA private key. Only do this on pages you trust to manage your zkCertificates."
 
-func GetEdDSAKeyFromEthereumPrivateKey(privateKey *ecdsa.PrivateKey) (babyjub.PrivateKey, error) {
-	hash := crypto.Keccak256Hash([]byte(edDSAGenerationMessage))
+var edDSAGenerationMessageHash = crypto.Keccak256Hash([]byte(edDSAGenerationMessage)).Bytes()
 
-	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+func DeriveEdDSAKeyFromEthereumPrivateKey(privateKey *ecdsa.PrivateKey) (babyjub.PrivateKey, error) {
+	signature, err := crypto.Sign(edDSAGenerationMessageHash, privateKey)
 	if err != nil {
 		return babyjub.PrivateKey{}, fmt.Errorf("sign message: %w", err)
 	}
