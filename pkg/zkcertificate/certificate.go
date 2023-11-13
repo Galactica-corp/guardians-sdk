@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+
+	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
 
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
@@ -25,8 +28,8 @@ type Certificate[T any] struct {
 
 // ProviderData represents the public key and signature data of a certificate provider.
 type ProviderData struct {
-	PublicKey *babyjub.PublicKey
-	Signature *babyjub.Signature
+	PublicKey babyjub.PublicKey
+	Signature babyjub.Signature
 }
 
 // CertificateContent is an interface that represents the content of a certificate.
@@ -76,8 +79,8 @@ func NewCertificate[T CertificateContent](
 		Content:          content,
 		ContentHash:      contentHash,
 		Provider: ProviderData{
-			PublicKey: providerPublicKey,
-			Signature: providerSignature,
+			PublicKey: *providerPublicKey,
+			Signature: *providerSignature,
 		},
 		RandomSalt: salt,
 	}, nil
@@ -109,23 +112,17 @@ func (p *ProviderData) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	publicKeyPoint := &babyjub.Point{}
-
 	var ok bool
 
-	publicKeyPoint.X, ok = new(big.Int).SetString(dto.Ax, 10)
+	p.PublicKey.X, ok = new(big.Int).SetString(dto.Ax, 10)
 	if !ok {
 		return fmt.Errorf("invalid x coordinate of public key point")
 	}
 
-	publicKeyPoint.Y, ok = new(big.Int).SetString(dto.Bx, 10)
+	p.PublicKey.Y, ok = new(big.Int).SetString(dto.Bx, 10)
 	if !ok {
 		return fmt.Errorf("invalid y coordinate of public key point")
 	}
-
-	p.PublicKey = (*babyjub.PublicKey)(publicKeyPoint)
-
-	signature := &babyjub.Signature{}
 
 	signatureR8Point := &babyjub.Point{}
 
@@ -139,16 +136,28 @@ func (p *ProviderData) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid y coordinate of signature r8 point")
 	}
 
-	signature.R8 = signatureR8Point
+	p.Signature.R8 = signatureR8Point
 
-	signature.S, ok = new(big.Int).SetString(dto.S, 10)
+	p.Signature.S, ok = new(big.Int).SetString(dto.S, 10)
 	if !ok {
 		return fmt.Errorf("invalid s component of signature")
 	}
 
-	p.Signature = signature
-
 	return nil
+}
+
+// IssuedCertificate represents a certificate that has been issued and includes registration details.
+type IssuedCertificate[T any] struct {
+	Certificate[T] `json:",inline"`
+	Registration   RegistrationDetails `json:"registration"`
+	MerkleProof    merkle.Proof        `json:"merkleProof"`
+}
+
+// RegistrationDetails represents details related to the registration of a certificate.
+type RegistrationDetails struct {
+	Address   common.Address `json:"address"`
+	Revocable bool           `json:"revocable"`
+	LeafIndex int            `json:"leafIndex"`
 }
 
 // SignCertificate generates a digital signature for a certificate using the provider's private key.

@@ -22,6 +22,14 @@ func (h Hash) BigInt() *big.Int {
 	return &n
 }
 
+// Bytes32 converts a Hash value to a 32-byte array.
+func (h Hash) Bytes32() [32]byte {
+	var res [32]byte
+	h.BigInt().FillBytes(res[:])
+
+	return res
+}
+
 // String returns the string representation of the Hash value.
 func (h Hash) String() string {
 	return h.BigInt().String()
