@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -80,10 +81,12 @@ func generateEdDSAKeyPair(f *generateEdDSAKeyPairFlags) func(cmd *cobra.Command,
 		if err := keymanagement.SaveEdDSA(f.outputFilePath, privateKey); err != nil {
 			return fmt.Errorf("save eddsa private key: %w", err)
 		}
-		fmt.Println("Saved EdDSA private key to", f.outputFilePath)
+
+		_, _ = fmt.Fprintln(os.Stderr, "Saved EdDSA private key to", f.outputFilePath)
 
 		publicKey := privateKey.Public()
-		fmt.Println("EdDSA public key", publicKey.X, publicKey.Y)
+
+		_, _ = fmt.Fprintln(os.Stderr, "EdDSA public key", publicKey.X, publicKey.Y)
 
 		return nil
 	}

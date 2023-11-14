@@ -67,7 +67,7 @@ $ galactica-guardian createZKCert -s standardA -H holder_commitment.json -i cert
 		RunE: createZKCertCmd(&f),
 	}
 
-	cmd.Flags().StringVarP(&f.holderFilePath, "holder-commitment-file", "H", "", "path to the file containing holder commitment")
+	cmd.Flags().StringVarP(&f.holderFilePath, "holder-commitment-file", "H", "", "path to a file containing holder commitment")
 	cmd.Flags().Int64VarP(&f.randomSalt, "random-salt", "", 0, "random salt to input into zkCert hashing")
 	cmd.Flags().StringVarP(&f.certificateStandard, "standard", "s", zkcertificate.StandardKYC.String(), `standard identifies the type of zkCert. At the moment we only have “gip69” for ZkKYC`)
 	cmd.Flags().StringVarP(&f.certificateInputsFilePath, "certificate-inputs-file", "i", "", "path to a JSON file with inputs for a zkCert. Which specific input fields are required depends on the certificate type")

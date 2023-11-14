@@ -53,6 +53,7 @@ to the respective sections in the documentation.
 	cmd.AddCommand(NewCmdGenerateEdDSAKeyPair())
 	cmd.AddCommand(NewCmdCreateZKCert())
 	cmd.AddCommand(NewCmdIssueZKCert())
+	cmd.AddCommand(NewCmdEncryptZKCert())
 
 	return cmd
 }

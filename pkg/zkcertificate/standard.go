@@ -10,7 +10,7 @@ type Standard string
 
 const StandardKYC Standard = "gip69"
 
-var allStandards = []string{"gip69"}
+var allStandards = []string{StandardKYC.String()}
 
 // IsStandard returns true if given value is a valid Standard.
 func IsStandard(value string) bool {
