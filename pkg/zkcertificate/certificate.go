@@ -32,9 +32,9 @@ type ProviderData struct {
 	Signature babyjub.Signature
 }
 
-// CertificateContent is an interface that represents the content of a certificate.
+// Content is an interface that represents the content of a certificate.
 // It defines methods for calculating the content's hash and obtaining the standard it adheres to.
-type CertificateContent interface {
+type Content interface {
 	// Hash computes and returns the Poseidon hash of the certificate content.
 	Hash() (Hash, error)
 	// Standard returns the standard to which the certificate content adheres.
@@ -44,7 +44,7 @@ type CertificateContent interface {
 // NewCertificate creates a new certificate instance with the provided parameters and content.
 // It computes the content hash, verifies if the content was actually signed with providers public key,
 // and generates a leaf hash.
-func NewCertificate[T CertificateContent](
+func NewCertificate[T Content](
 	holderCommitment Hash,
 	content T,
 	providerPublicKey *babyjub.PublicKey,
@@ -223,7 +223,7 @@ func DID(standard Standard, leafHash Hash) string {
 }
 
 // FFEncoder is an interface for objects that can perform encoding to Finite Field (FF).
-type FFEncoder[T CertificateContent] interface {
+type FFEncoder[T Content] interface {
 	// FFEncode performs Finite Field (FF) encoding and returns the result that can be used as certificate content.
 	FFEncode() (T, error)
 }

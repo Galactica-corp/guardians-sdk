@@ -84,7 +84,7 @@ func TestTree_GetProof(t *testing.T) {
 
 	expectedPath := []merkle.TreeNode{tree.Nodes[6], tree.Nodes[1], tree.Nodes[0]}
 	require.True(t, areTreeNodeSlicesEqual(expectedPath, proof.Path), "proof paths are not equal")
-	require.Equal(t, 1, proof.Indices)
+	require.True(t, proof.Leaf.Value.Eq(tree.Nodes[5].Value))
 }
 
 func TestTree_GetProof_outOfRange(t *testing.T) {

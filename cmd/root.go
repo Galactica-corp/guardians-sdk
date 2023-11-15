@@ -56,6 +56,7 @@ to the respective sections in the documentation.
 		NewCmdIssueZKCert(),
 		NewCmdEncryptZKCert(),
 		NewCmdRevokeZKCert(),
+		NewCmdRenewZKCert(),
 	)
 
 	return cmd

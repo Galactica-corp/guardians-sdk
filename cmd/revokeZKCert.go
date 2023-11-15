@@ -92,7 +92,7 @@ func revokeZKCertCmd(f *revokeZKCertFlags) func(cmd *cobra.Command, args []strin
 func revokeZKCert(f *revokeZKCertFlags) error {
 	ctx := context.Background()
 
-	var certificate zkcertificate.IssuedCertificate[any]
+	var certificate zkcertificate.IssuedCertificate[json.RawMessage]
 	if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}

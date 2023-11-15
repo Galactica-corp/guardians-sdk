@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -142,7 +143,7 @@ func createZKCert(f *createZKCertFlags) error {
 		return fmt.Errorf("save certificate: %w", err)
 	}
 
-	fmt.Println("Saved certificate JSON to", f.outputFilePath)
+	_, _ = fmt.Fprintln(os.Stderr, "Saved certificate JSON to", f.outputFilePath)
 
 	return nil
 }
@@ -150,7 +151,7 @@ func createZKCert(f *createZKCertFlags) error {
 func readCertificateContent(
 	filePath string,
 	standard zkcertificate.Standard,
-) (zkcertificate.CertificateContent, error) {
+) (zkcertificate.Content, error) {
 	switch standard {
 	case zkcertificate.StandardKYC:
 		var inputs zkcertificate.KYCInputs

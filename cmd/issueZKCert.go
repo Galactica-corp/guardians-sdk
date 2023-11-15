@@ -100,7 +100,7 @@ func issueZKCertCmd(f *issueZKCertFlags) func(cmd *cobra.Command, args []string)
 func issueZKCert(f *issueZKCertFlags) error {
 	ctx := context.Background()
 
-	var certificate zkcertificate.Certificate[any]
+	var certificate zkcertificate.Certificate[json.RawMessage]
 	if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}

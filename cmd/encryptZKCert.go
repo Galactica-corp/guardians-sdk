@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -66,7 +67,7 @@ $ galactica-guardian encryptZKCert -c zkcert.json -H holder_commitment.json -o e
 
 func encryptZKCertCmd(f *encryptZKCertFlags) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var certificate zkcertificate.Certificate[any]
+		var certificate zkcertificate.Certificate[json.RawMessage]
 		if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
 			return fmt.Errorf("read certificate: %w", err)
 		}
