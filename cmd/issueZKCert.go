@@ -68,7 +68,7 @@ a provider's Ethereum private key for signing the transaction.
 
 Upon successful issuance, the command outputs transaction details, registration
 information, and the Merkle proof for verification purposes. After submitting
-the transaction,The issued ZKCert will be added to the blockchain registry,
+the transaction, the issued ZKCert will be added to the blockchain registry,
 ensuring its validity and accessibility.
 
 Example Usage:
@@ -79,7 +79,7 @@ $ galactica-guardian issueZKCert -c zkcert.json -k provider_private_key.hex -o o
 	cmd.Flags().StringVarP(&f.certificateFilePath, "certificate-file", "c", "", "path to a file containing zkCert created using createZKCert command")
 	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "issued-certificate.json", "path to a file where the issued certificate in JSON format should be saved")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
-	cmd.Flags().VarP(&f.registryAddress, "registry-address", "", "Ethereum address of the registry contract on-chain")
+	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
 	cmd.Flags().Int64VarP(&f.firstBlock, "registry-events-start", "", 0, "block number in which first event was emitted by the registry. This block might be before the first event, but if it will be after, then it will lead to incorrect result. It greatly improves time to build a merkle tree, because RPC requests are limited to inspect at most 10'000 blocks at once")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 
@@ -110,7 +110,9 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	registry, err := loadRecordRegistry(client, f.registryAddress.Address(), certificate.Standard)
+	registryAddress := f.registryAddress.Address()
+
+	registry, err := loadRecordRegistry(client, registryAddress, certificate.Standard)
 	if err != nil {
 		return fmt.Errorf("load record registry: %w", err)
 	}
@@ -126,22 +128,19 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	emptyLeafIndex, proof, err := findEmptyTreeLeaf(ctx, client, f.registryAddress.Address(), registry, f.firstBlock)
+	emptyLeafIndex, proof, err := findEmptyTreeLeaf(ctx, client, registryAddress, registry, f.firstBlock)
 	if err != nil {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
-	tx, err := constructTransaction(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
+	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
 	}
 
-	txJSON, err := json.Marshal(tx)
-	if err != nil {
+	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
-
-	fmt.Println(string(txJSON))
 
 	if err := buildAndSaveOutput(f.outputFilePath, certificate, providerAddress, emptyLeafIndex, proof); err != nil {
 		return fmt.Errorf("collect output: %w", err)
@@ -168,6 +167,12 @@ type (
 
 	RecordRegistryTransactor interface {
 		AddZkKYCRecord(
+			opts *bind.TransactOpts,
+			leafIndex *big.Int,
+			zkKYCRecordHash [32]byte,
+			merkleProof [][32]byte,
+		) (*types.Transaction, error)
+		RevokeZkKYCRecord(
 			opts *bind.TransactOpts,
 			leafIndex *big.Int,
 			zkKYCRecordHash [32]byte,
@@ -255,7 +260,7 @@ func findEmptyTreeLeaf(
 	return emptyLeafIndex, proof, nil
 }
 
-func constructTransaction(
+func constructIssueZKCertTx(
 	ctx context.Context,
 	client *ethclient.Client,
 	providerKey *ecdsa.PrivateKey,

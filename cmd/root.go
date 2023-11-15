@@ -50,10 +50,13 @@ to the respective sections in the documentation.
 `,
 	}
 
-	cmd.AddCommand(NewCmdGenerateEdDSAKeyPair())
-	cmd.AddCommand(NewCmdCreateZKCert())
-	cmd.AddCommand(NewCmdIssueZKCert())
-	cmd.AddCommand(NewCmdEncryptZKCert())
+	cmd.AddCommand(
+		NewCmdGenerateEdDSAKeyPair(),
+		NewCmdCreateZKCert(),
+		NewCmdIssueZKCert(),
+		NewCmdEncryptZKCert(),
+		NewCmdRevokeZKCert(),
+	)
 
 	return cmd
 }
