@@ -1,3 +1,20 @@
+/*
+ Copyright © 2023 Galactica Network
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package zkcertificate
 
 import (
@@ -7,6 +24,8 @@ import (
 	"strconv"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
+
+	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
 // KYCInputs represents the input data for Know Your Customer (KYC) verification.
@@ -104,7 +123,7 @@ func (k KYCInputs) FFEncode() (KYCContent, error) {
 // for field validation. It checks that the fields of the KYCInputs struct adhere to
 // the defined validation rules.
 func (k *KYCInputs) Validate() error {
-	return validate.Struct(k)
+	return validation.Validate.Struct(k)
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface.
