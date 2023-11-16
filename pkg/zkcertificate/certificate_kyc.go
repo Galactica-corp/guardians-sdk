@@ -12,21 +12,21 @@ import (
 // KYCInputs represents the input data for Know Your Customer (KYC) verification.
 // It contains various fields required for identity verification and validation.
 type KYCInputs struct {
-	Surname           string            `json:"surname" validate:"required"`
-	Forename          string            `json:"forename" validate:"required"`
-	MiddleName        string            `json:"middlename" validate:"omitempty"`
-	YearOfBirth       uint16            `json:"yearOfBirth" validate:"required"`
-	MonthOfBirth      uint16            `json:"monthOfBirth" validate:"required,gte=1,lte=12"`
-	DayOfBirth        uint16            `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
-	Citizenship       string            `json:"citizenship" validate:"required,iso3166_1_alpha3"`
-	VerificationLevel VerificationLevel `json:"verificationLevel"`
-	ExpirationDate    Timestamp         `json:"expirationDate"`
-	StreetAndNumber   string            `json:"streetAndNumber" validate:"required"`
-	Postcode          string            `json:"postcode" validate:"required"`
-	Town              string            `json:"town" validate:"required"`
-	Region            string            `json:"region" validate:"omitempty,iso3166_2"`
-	Country           string            `json:"country" validate:"required,iso3166_1_alpha3"`
-	PassportID        string            `json:"passportID" validate:"required"`
+	Surname           string               `json:"surname" validate:"required"`
+	Forename          string               `json:"forename" validate:"required"`
+	MiddleName        string               `json:"middlename" validate:"omitempty"`
+	YearOfBirth       uint16               `json:"yearOfBirth" validate:"required"`
+	MonthOfBirth      uint16               `json:"monthOfBirth" validate:"required,gte=1,lte=12"`
+	DayOfBirth        uint16               `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
+	Citizenship       string               `json:"citizenship" validate:"required,iso3166_1_alpha3"`
+	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
+	ExpirationDate    Timestamp            `json:"expirationDate"`
+	StreetAndNumber   string               `json:"streetAndNumber" validate:"required"`
+	Postcode          string               `json:"postcode" validate:"required"`
+	Town              string               `json:"town" validate:"required"`
+	Region            string               `json:"region" validate:"omitempty,iso3166_2"`
+	Country           string               `json:"country" validate:"required,iso3166_1_alpha3"`
+	PassportID        string               `json:"passportID" validate:"required"`
 }
 
 // FFEncode implements FFEncoder interface.
@@ -127,21 +127,21 @@ func (k *KYCInputs) UnmarshalJSON(data []byte) error {
 // KYCContent represents the hashed content of KYC (Know Your Customer) data.
 // It contains hashed values for various fields related to identity and verification.
 type KYCContent struct {
-	Surname           Hash              `json:"surname"`
-	Forename          Hash              `json:"forename"`
-	MiddleName        Hash              `json:"middlename"`
-	YearOfBirth       uint16            `json:"yearOfBirth"`
-	MonthOfBirth      uint16            `json:"monthOfBirth"`
-	DayOfBirth        uint16            `json:"dayOfBirth"`
-	VerificationLevel VerificationLevel `json:"verificationLevel"`
-	ExpirationDate    Timestamp         `json:"expirationDate"`
-	StreetAndNumber   Hash              `json:"streetAndNumber"`
-	Postcode          Hash              `json:"postcode"`
-	Town              Hash              `json:"town"`
-	Region            Hash              `json:"region"`
-	Country           Hash              `json:"country"`
-	Citizenship       Hash              `json:"citizenship"`
-	PassportID        Hash              `json:"passportID"`
+	Surname           Hash                 `json:"surname"`
+	Forename          Hash                 `json:"forename"`
+	MiddleName        Hash                 `json:"middlename"`
+	YearOfBirth       uint16               `json:"yearOfBirth"`
+	MonthOfBirth      uint16               `json:"monthOfBirth"`
+	DayOfBirth        uint16               `json:"dayOfBirth"`
+	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
+	ExpirationDate    Timestamp            `json:"expirationDate"`
+	StreetAndNumber   Hash                 `json:"streetAndNumber"`
+	Postcode          Hash                 `json:"postcode"`
+	Town              Hash                 `json:"town"`
+	Region            Hash                 `json:"region"`
+	Country           Hash                 `json:"country"`
+	Citizenship       Hash                 `json:"citizenship"`
+	PassportID        Hash                 `json:"passportID"`
 }
 
 // Standard returns the standard associated with the KYCContent, which is StandardKYC.
@@ -175,27 +175,27 @@ func (c KYCContent) Hash() (Hash, error) {
 	return HashFromBigInt(hash), nil
 }
 
-// VerificationLevel represents the different levels of verification in a KYC (Know Your Customer) process.
-type VerificationLevel int
+// KYCVerificationLevel represents the different levels of verification in a KYC (Know Your Customer) process.
+type KYCVerificationLevel int
 
 const (
-	KYCVerificationLevelNoKYC VerificationLevel = iota
+	KYCVerificationLevelNoKYC KYCVerificationLevel = iota
 	KYCVerificationLevelPassedKYC
 	KYCVerificationLevelQualifiedInvestor
 )
 
 // UnmarshalText implements encoding.TextUnmarshaler interface.
-func (v *VerificationLevel) UnmarshalText(text []byte) error {
+func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
 	res, err := strconv.Atoi(string(text))
 	if err != nil {
 		return err
 	}
 
-	*v = VerificationLevel(res)
+	*v = KYCVerificationLevel(res)
 	return nil
 }
 
 // MarshalText implements encoding.TextMarshaler interface.
-func (v VerificationLevel) MarshalText() (text []byte, err error) {
+func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
 	return []byte(strconv.Itoa(int(v))), nil
 }
