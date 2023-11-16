@@ -8,7 +8,7 @@ import (
 // HolderCommitment represents a structure containing a commitment hash and an encryption key.
 type HolderCommitment struct {
 	CommitmentHash Hash   `json:"holderCommitment" validate:"required"`
-	EncryptionKey  []byte `json:"encryptionPubKey" validate:"required"`
+	EncryptionKey  []byte `json:"encryptionPubKey" validate:"required,len=32"`
 }
 
 // Validate performs validation on the HolderCommitment instance using the struct tags specified

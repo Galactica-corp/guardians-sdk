@@ -42,7 +42,7 @@ func EncryptWithPadding(encryptionKey [32]byte, message any) (EncryptedMessage, 
 
 	padLength := 0
 	if m := len(data) % defaultPaddingLength; m > 0 {
-		padLength = defaultPaddingLength - len(data) - box.Overhead
+		padLength = defaultPaddingLength - m - box.Overhead
 	}
 
 	data, err = json.Marshal(dataWithPadding{

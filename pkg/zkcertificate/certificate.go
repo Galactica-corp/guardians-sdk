@@ -41,10 +41,10 @@ type Content interface {
 	Standard() Standard
 }
 
-// NewCertificate creates a new certificate instance with the provided parameters and content.
+// New creates a new certificate instance with the provided parameters and content.
 // It computes the content hash, verifies if the content was actually signed with providers public key,
 // and generates a leaf hash.
-func NewCertificate[T Content](
+func New[T Content](
 	holderCommitment Hash,
 	content T,
 	providerPublicKey *babyjub.PublicKey,

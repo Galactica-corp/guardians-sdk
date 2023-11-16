@@ -128,7 +128,7 @@ func createZKCert(f *createZKCertFlags) error {
 		return fmt.Errorf("sign certificate: %w", err)
 	}
 
-	certificate, err := zkcertificate.NewCertificate(
+	certificate, err := zkcertificate.New(
 		holderCommitment.CommitmentHash,
 		certificateContent,
 		providerKey.Public(),

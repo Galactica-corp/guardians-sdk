@@ -123,7 +123,7 @@ func renewZKCert(f *renewZKCertFlags) error {
 		return fmt.Errorf("sign certificate: %w", err)
 	}
 
-	newCertificate, err := zkcertificate.NewCertificate(
+	newCertificate, err := zkcertificate.New(
 		certificate.HolderCommitment,
 		certificateContent,
 		providerKey.Public(), // TODO: Can different provider renew the certificate?

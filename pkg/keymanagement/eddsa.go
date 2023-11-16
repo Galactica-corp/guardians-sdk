@@ -17,6 +17,9 @@ const edDSAGenerationMessage = "Signing this message generates your EdDSA privat
 
 var edDSAGenerationMessageHash = crypto.Keccak256Hash([]byte(edDSAGenerationMessage)).Bytes()
 
+// DeriveEdDSAKeyFromEthereumPrivateKey derives an EdDSA (Poseidon hash over BN128 elliptic curve signature scheme)
+// private key from an Ethereum private key. It signs a predefined message hash using the Ethereum private key
+// and converts the resulting signature into an EdDSA private key for further use.
 func DeriveEdDSAKeyFromEthereumPrivateKey(privateKey *ecdsa.PrivateKey) (babyjub.PrivateKey, error) {
 	signature, err := crypto.Sign(edDSAGenerationMessageHash, privateKey)
 	if err != nil {
