@@ -52,7 +52,7 @@ func (h Hash) String() string {
 	return h.BigInt().String()
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler interface.
+// UnmarshalText implements [encoding.TextUnmarshaler].
 func (h *Hash) UnmarshalText(text []byte) error {
 	var res big.Int
 	if err := res.UnmarshalText(text); err != nil {
@@ -63,7 +63,7 @@ func (h *Hash) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalText implements encoding.TextMarshaler interface.
+// MarshalText implements [encoding.TextMarshaler].
 func (h Hash) MarshalText() (text []byte, err error) {
 	return h.BigInt().MarshalText()
 }

@@ -111,7 +111,7 @@ type providerDataDTO struct {
 	R8y string `json:"r8y"`
 }
 
-// MarshalJSON implements json.Marshaler interface.
+// MarshalJSON implements [json.Marshaler].
 func (p ProviderData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(providerDataDTO{
 		Ax:  p.PublicKey.X.String(),
@@ -122,7 +122,7 @@ func (p ProviderData) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// UnmarshalJSON implements json.Unmarshaler interface.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (p *ProviderData) UnmarshalJSON(data []byte) error {
 	var dto providerDataDTO
 	if err := json.Unmarshal(data, &dto); err != nil {

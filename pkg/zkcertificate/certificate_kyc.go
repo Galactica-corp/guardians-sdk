@@ -48,7 +48,7 @@ type KYCInputs struct {
 	PassportID        string               `json:"passportID" validate:"required"`
 }
 
-// FFEncode implements FFEncoder interface.
+// FFEncode implements FFEncoder.
 func (k KYCInputs) FFEncode() (KYCContent, error) {
 	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
 	if err != nil {
@@ -126,7 +126,7 @@ func (k *KYCInputs) Validate() error {
 	return validation.Validate.Struct(k)
 }
 
-// UnmarshalJSON implements json.Unmarshaler interface.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (k *KYCInputs) UnmarshalJSON(data []byte) error {
 	type Alias KYCInputs
 
@@ -203,7 +203,7 @@ const (
 	KYCVerificationLevelQualifiedInvestor
 )
 
-// UnmarshalText implements encoding.TextUnmarshaler interface.
+// UnmarshalText implements [encoding.TextUnmarshaler].
 func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
 	res, err := strconv.Atoi(string(text))
 	if err != nil {
@@ -214,7 +214,7 @@ func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// MarshalText implements encoding.TextMarshaler interface.
+// MarshalText implements [encoding.TextMarshaler].
 func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
 	return []byte(strconv.Itoa(int(v))), nil
 }

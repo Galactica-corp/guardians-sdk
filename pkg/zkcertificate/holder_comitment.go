@@ -37,7 +37,7 @@ func (c HolderCommitment) Validate() error {
 	return validation.Validate.Struct(c)
 }
 
-// UnmarshalJSON implements json.Unmarshaler interface.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (c *HolderCommitment) UnmarshalJSON(data []byte) error {
 	type Alias HolderCommitment
 

@@ -40,7 +40,7 @@ func (v Version) String() string {
 	return string(v)
 }
 
-// UnmarshalText implements encoding.TextUnmarshaler interface.
+// UnmarshalText implements [encoding.TextUnmarshaler].
 func (s *Version) UnmarshalText(value []byte) error {
 	text := string(value)
 
@@ -52,7 +52,7 @@ func (s *Version) UnmarshalText(value []byte) error {
 	return nil
 }
 
-// MarshalText implements encoding.TextMarshaler interface.
+// MarshalText implements [encoding.TextMarshaler].
 func (s Version) MarshalText() (text []byte, err error) {
 	return []byte(s), nil
 }

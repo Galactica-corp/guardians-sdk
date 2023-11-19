@@ -31,12 +31,12 @@ func (t Timestamp) Unix() int64 {
 	return time.Time(t).Unix()
 }
 
-// MarshalJSON implements json.Marshaler interface.
+// MarshalJSON implements [json.Marshaler].
 func (t Timestamp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Unix())
 }
 
-// UnmarshalJSON implements json.Unmarshaler interface.
+// UnmarshalJSON implements [json.Unmarshaler].
 func (t *Timestamp) UnmarshalJSON(bytes []byte) error {
 	text := string(bytes)
 
