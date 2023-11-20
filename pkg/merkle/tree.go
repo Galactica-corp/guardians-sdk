@@ -48,9 +48,9 @@ type Tree struct {
 }
 
 type Proof struct {
-	// Leaf is the Merkle tree node, which authenticity is proved by the Path.
-	Leaf TreeNode   `json:"leaf"`
-	Path []TreeNode `json:"path"`
+	Leaf      TreeNode   `json:"leaf"`      // The Merkle tree node, which authenticity is proved by the Path.
+	LeafIndex int        `json:"leafIndex"` // Index of the Leaf in the Merkle tree.
+	Path      []TreeNode `json:"path"`
 }
 
 var EmptyLeafValue = new(uint256.Int).Mod(
@@ -139,8 +139,9 @@ func (t *Tree) GetProof(i int) (Proof, error) {
 	j := len(t.Nodes) - leavesAmount + i
 
 	proof := Proof{
-		Path: make([]TreeNode, int(math.Log2(float64(len(t.Nodes)+1)))),
-		Leaf: t.Nodes[j],
+		Path:      make([]TreeNode, int(math.Log2(float64(len(t.Nodes)+1)))),
+		Leaf:      t.Nodes[j],
+		LeafIndex: i,
 	}
 
 	for level := 0; j > 0; j, level = GetParentIndex(j), level+1 {
