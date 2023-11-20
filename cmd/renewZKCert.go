@@ -37,7 +37,6 @@ type renewZKCertFlags struct {
 	expirationDate         string
 	outputFilePath         string
 	providerPrivateKeyPath string
-	randomSalt             int64
 }
 
 func NewCmdRenewZKCert() *cobra.Command {
@@ -68,7 +67,6 @@ $ galactica-guardian renewZKCert -c zkcert.json -k provider_private_key.hex -e 2
 	cmd.Flags().StringVarP(&f.expirationDate, "expiration-date", "e", "", "new expiration date for the certificate in RFC3339 format")
 	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "prolonged-certificate.json", "path to a file where the prolonged certificate in JSON format should be saved")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded EdDSA private key")
-	cmd.Flags().Int64VarP(&f.randomSalt, "random-salt", "", 0, "random salt to input into zkCert hashing")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("expiration-date")
@@ -84,15 +82,6 @@ func renewZKCertCmd(f *renewZKCertFlags) func(cmd *cobra.Command, args []string)
 }
 
 func renewZKCert(f *renewZKCertFlags) error {
-	if f.randomSalt == 0 {
-		salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
-		if err != nil {
-			return fmt.Errorf("generate random salt: %w", err)
-		}
-
-		f.randomSalt = salt.Int64() + 1 // [1, MaxInt64]
-	}
-
 	expirationDate, err := time.Parse(time.RFC3339, f.expirationDate)
 	if err != nil {
 		return fmt.Errorf("invalid expiration date: %w", err)
@@ -123,12 +112,19 @@ func renewZKCert(f *renewZKCertFlags) error {
 		return fmt.Errorf("sign certificate: %w", err)
 	}
 
+	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
+	if err != nil {
+		return fmt.Errorf("generate random salt: %w", err)
+	}
+
+	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
+
 	newCertificate, err := zkcertificate.New(
 		certificate.HolderCommitment,
 		certificateContent,
-		providerKey.Public(), // TODO: Can different provider renew the certificate?
+		providerKey.Public(),
 		signature,
-		f.randomSalt, // TODO: Should the salt be the same? It better not
+		randomSalt,
 	)
 	if err != nil {
 		return fmt.Errorf("create new certificate: %w", err)
@@ -168,7 +164,6 @@ func setNewExpirationDate(
 			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
 		}
 
-		// TODO: Maybe check that the new expiration date is after the old one?
 		content.ExpirationDate = zkcertificate.Timestamp(expirationDate)
 		return content, nil
 	default:

@@ -32,7 +32,6 @@ import (
 
 type createZKCertFlags struct {
 	holderFilePath            string
-	randomSalt                int64
 	certificateStandard       string
 	certificateInputsFilePath string
 	providerPrivateKeyPath    string
@@ -69,7 +68,6 @@ $ galactica-guardian createZKCert -s standardA -H holder_commitment.json -i cert
 	}
 
 	cmd.Flags().StringVarP(&f.holderFilePath, "holder-commitment-file", "H", "", "path to a file containing holder commitment")
-	cmd.Flags().Int64VarP(&f.randomSalt, "random-salt", "", 0, "random salt to input into zkCert hashing")
 	cmd.Flags().StringVarP(&f.certificateStandard, "standard", "s", zkcertificate.StandardKYC.String(), `standard identifies the type of zkCert. At the moment we only have “gip69” for ZkKYC`)
 	cmd.Flags().StringVarP(&f.certificateInputsFilePath, "certificate-inputs-file", "i", "", "path to a JSON file with inputs for a zkCert. Which specific input fields are required depends on the certificate type")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded EdDSA private key")
@@ -89,15 +87,6 @@ func createZKCertCmd(f *createZKCertFlags) func(cmd *cobra.Command, args []strin
 }
 
 func createZKCert(f *createZKCertFlags) error {
-	if f.randomSalt == 0 {
-		salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
-		if err != nil {
-			return fmt.Errorf("generate random salt: %w", err)
-		}
-
-		f.randomSalt = salt.Int64() + 1 // [1, MaxInt64]
-	}
-
 	var standard zkcertificate.Standard
 	if err := standard.UnmarshalText([]byte(f.certificateStandard)); err != nil {
 		return fmt.Errorf("parse certificate standard: %w", err)
@@ -128,12 +117,19 @@ func createZKCert(f *createZKCertFlags) error {
 		return fmt.Errorf("sign certificate: %w", err)
 	}
 
+	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
+	if err != nil {
+		return fmt.Errorf("generate random salt: %w", err)
+	}
+
+	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
+
 	certificate, err := zkcertificate.New(
 		holderCommitment.CommitmentHash,
 		certificateContent,
 		providerKey.Public(),
 		signature,
-		f.randomSalt,
+		randomSalt,
 	)
 	if err != nil {
 		return fmt.Errorf("create certificate: %w", err)
