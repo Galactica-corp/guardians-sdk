@@ -133,6 +133,12 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("construct transaction to revoke record from registry: %w", err)
 	}
 
+	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
+		return fmt.Errorf("wait until transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+	}
+
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
 		return fmt.Errorf("encode revocation transaction to json: %w", err)
 	}
@@ -158,8 +164,6 @@ func constructRevokeZKCertTx(
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
-
-	auth.NoSend = true
 
 	return recordRegistry.RevokeZkKYCRecord(
 		auth,

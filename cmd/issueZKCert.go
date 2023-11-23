@@ -138,6 +138,13 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
 	}
 
+	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
+		return fmt.Errorf("wait until transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		// TODO: Inspect a transaction that is really failed
+		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+	}
+
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
@@ -278,8 +285,6 @@ func constructIssueZKCertTx(
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
-
-	auth.NoSend = true
 
 	return recordRegistry.AddZkKYCRecord(
 		auth,
