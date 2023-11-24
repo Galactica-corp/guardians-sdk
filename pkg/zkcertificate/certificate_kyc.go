@@ -35,8 +35,8 @@ type KYCInputs struct {
 	Forename          string               `json:"forename" validate:"required"`
 	MiddleName        string               `json:"middlename" validate:"omitempty"`
 	YearOfBirth       uint16               `json:"yearOfBirth" validate:"required"`
-	MonthOfBirth      uint16               `json:"monthOfBirth" validate:"required,gte=1,lte=12"`
-	DayOfBirth        uint16               `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
+	MonthOfBirth      uint8                `json:"monthOfBirth" validate:"required,gte=1,lte=12"`
+	DayOfBirth        uint8                `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
 	Citizenship       string               `json:"citizenship" validate:"required,iso3166_1_alpha3"`
 	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
 	ExpirationDate    Timestamp            `json:"expirationDate"`
@@ -150,8 +150,8 @@ type KYCContent struct {
 	Forename          Hash                 `json:"forename"`
 	MiddleName        Hash                 `json:"middlename"`
 	YearOfBirth       uint16               `json:"yearOfBirth"`
-	MonthOfBirth      uint16               `json:"monthOfBirth"`
-	DayOfBirth        uint16               `json:"dayOfBirth"`
+	MonthOfBirth      uint8                `json:"monthOfBirth"`
+	DayOfBirth        uint8                `json:"dayOfBirth"`
 	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
 	ExpirationDate    Timestamp            `json:"expirationDate"`
 	StreetAndNumber   Hash                 `json:"streetAndNumber"`
