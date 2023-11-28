@@ -122,9 +122,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("load provider's ethereum private key: %w", err)
 	}
 
-	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
-
-	if err := ensureProviderIsGuardian(client, registry, providerAddress); err != nil {
+	if err := ensureProviderIsGuardian(client, registry, crypto.PubkeyToAddress(providerKey.PublicKey)); err != nil {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
@@ -149,7 +147,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
 
-	if err := buildAndSaveOutput(f.outputFilePath, certificate, providerAddress, emptyLeafIndex, proof); err != nil {
+	if err := buildAndSaveOutput(f.outputFilePath, certificate, registryAddress, emptyLeafIndex, proof); err != nil {
 		return fmt.Errorf("collect output: %w", err)
 	}
 
@@ -297,14 +295,14 @@ func constructIssueZKCertTx(
 func buildAndSaveOutput[T any](
 	outputFilePath string,
 	certificate zkcertificate.Certificate[T],
-	providerAddress common.Address,
+	registryAddress common.Address,
 	leafIndex int,
 	proof merkle.Proof,
 ) error {
 	if err := encodeToJSONFile(outputFilePath, zkcertificate.IssuedCertificate[T]{
 		Certificate: certificate,
 		Registration: zkcertificate.RegistrationDetails{
-			Address:   providerAddress,
+			Address:   registryAddress,
 			Revocable: true,
 			LeafIndex: leafIndex,
 		},

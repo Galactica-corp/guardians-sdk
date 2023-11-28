@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
 )
@@ -41,7 +40,6 @@ type revokeZKCertFlags struct {
 	certificateFilePath    string
 	firstBlock             int64
 	providerPrivateKeyPath string
-	registryAddress        cli.Address
 	rpcURL                 string
 }
 
@@ -65,19 +63,17 @@ Upon successful execution, the command outputs the constructed revocation
 transaction, that provider needs to send manualy.
 
 Example Usage:
-$ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex -r registry_address`,
+$ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex`,
 		RunE: revokeZKCertCmd(&f),
 	}
 
 	cmd.Flags().StringVarP(&f.certificateFilePath, "certificate-file", "c", "", "path to a file containing issued zkCert obtained using issueZKCert command")
-	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
 	cmd.Flags().Int64VarP(&f.firstBlock, "registry-events-start", "", 0, "block number in which first event was emitted by the registry. This block might be before the first event, but if it will be after, then it will lead to incorrect result. It greatly improves time to build a merkle tree, because RPC requests are limited to inspect at most 10'000 blocks at once")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
-	_ = cmd.MarkFlagRequired("registry-address")
 	_ = cmd.MarkFlagRequired("rpc-url")
 
 	return cmd
@@ -102,7 +98,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	registryAddress := f.registryAddress.Address()
+	registryAddress := certificate.Registration.Address
 
 	registry, err := loadRecordRegistry(client, registryAddress, certificate.Standard)
 	if err != nil {
