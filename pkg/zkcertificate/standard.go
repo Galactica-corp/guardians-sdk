@@ -26,6 +26,7 @@ import (
 type Standard string
 
 const StandardKYC Standard = "gip69"
+const StandardSimpleJSON Standard = "gip70"
 
 var allStandards = []string{StandardKYC.String()}
 
