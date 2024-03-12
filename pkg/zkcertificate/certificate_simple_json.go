@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
@@ -17,7 +18,26 @@ func (k SimpleJSON) FFEncode() (SimpleJSONContent, error) {
 	hashedContent := make(SimpleJSONContent)
 
 	for key, value := range k {
-		hash, err := poseidon.HashBytes([]byte(fmt.Sprintf("%v", value)))
+		var valueStr string
+
+		switch v := value.(type) {
+		case string:
+			valueStr = v
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			valueStr = fmt.Sprintf("%v", v)
+		case bool:
+			if v {
+				valueStr = "true"
+			} else {
+				valueStr = "false"
+			}
+		case time.Time:
+			valueStr = v.Format(time.RFC3339)
+		default:
+			return nil, fmt.Errorf("unsupported type for field %s: %T", key, v)
+		}
+
+		hash, err := poseidon.HashBytes([]byte(valueStr))
 		if err != nil {
 			return nil, fmt.Errorf("hash field %s: %w", key, err)
 		}
@@ -41,7 +61,35 @@ func (k *SimpleJSON) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &tempMap); err != nil {
 		return err
 	}
-	*k = SimpleJSON(tempMap)
+
+	// Create a new SimpleJSON map to store the decoded values
+	decoded := make(SimpleJSON)
+
+	for key, value := range tempMap {
+		switch v := value.(type) {
+		case string:
+			// Try to parse the string as a time.Time value
+			if t, err := time.Parse(time.RFC3339, v); err == nil {
+				decoded[key] = t
+			} else {
+				decoded[key] = v
+			}
+		case float64:
+			// Check if the float64 value has a decimal part
+			if v == float64(int64(v)) {
+				// If the value doesn't have a decimal part, convert it to int64
+				decoded[key] = int64(v)
+			} else {
+				decoded[key] = v
+			}
+		case bool:
+			decoded[key] = v
+		default:
+			return fmt.Errorf("unsupported type for field %s: %T", key, v)
+		}
+	}
+
+	*k = decoded
 	return nil
 }
 
