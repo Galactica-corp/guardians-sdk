@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sort"
 	"time"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -106,7 +107,16 @@ func (c SimpleJSONContent) Standard() Standard {
 func (c SimpleJSONContent) Hash() (Hash, error) {
 	var hashInputs []*big.Int
 
-	for _, value := range c {
+	// Get the sorted keys of the SimpleJSONContent map
+	keys := make([]string, 0, len(c))
+	for key := range c {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// Iterate over the sorted keys and append the corresponding values to hashInputs
+	for _, key := range keys {
+		value := c[key]
 		hashInputs = append(hashInputs, value.BigInt())
 	}
 
