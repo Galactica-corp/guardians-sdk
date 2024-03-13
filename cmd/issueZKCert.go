@@ -110,7 +110,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 
 	registryAddress := f.registryAddress.Address()
 
-	registry, err := loadRecordRegistry(client, registryAddress, certificate.Standard)
+	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
 	if err != nil {
 		return fmt.Errorf("load record registry: %w", err)
 	}
@@ -137,7 +137,6 @@ func issueZKCert(f *issueZKCertFlags) error {
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
 		return fmt.Errorf("wait until transaction is mined: %w", err)
 	} else if receipt.Status == 0 {
-		// TODO: Inspect a transaction that is really failed
 		return fmt.Errorf("transaction %q falied", receipt.TxHash)
 	}
 
@@ -161,24 +160,23 @@ func connectToBlockchainRPC(ctx context.Context, rawURL string) (*ethclient.Clie
 	return ethclient.DialContext(ctx, rawURL)
 }
 
-// TODO: It would be nice to use the same ABI for every contract
 type (
 	RegistryEventParser interface {
-		ParseZkKYCRecordAddition(log types.Log) (*contracts.KYCRecordRegistryZkKYCRecordAddition, error)
-		ParseZkKYCRecordRevocation(log types.Log) (*contracts.KYCRecordRegistryZkKYCRecordRevocation, error)
+		ParseZkCertificateAddition(log types.Log) (*contracts.ZkCertificateRegistryZkCertificateAddition, error)
+		ParseZkCertificateRevocation(log types.Log) (*contracts.ZkCertificateRegistryZkCertificateRevocation, error)
 	}
 
 	RecordRegistryTransactor interface {
-		AddZkKYCRecord(
+		AddZkCertificate(
 			opts *bind.TransactOpts,
 			leafIndex *big.Int,
-			zkKYCRecordHash [32]byte,
+			zkCertificateHash [32]byte,
 			merkleProof [][32]byte,
 		) (*types.Transaction, error)
-		RevokeZkKYCRecord(
+		RevokeZkCertificate(
 			opts *bind.TransactOpts,
 			leafIndex *big.Int,
-			zkKYCRecordHash [32]byte,
+			zkCertificateHash [32]byte,
 			merkleProof [][32]byte,
 		) (*types.Transaction, error)
 	}
@@ -193,24 +191,6 @@ type (
 		RecordRegistryCaller
 	}
 )
-
-func loadRecordRegistry(
-	client bind.ContractBackend,
-	registryAddress common.Address,
-	standard zkcertificate.Standard,
-) (RecordRegistry, error) {
-	switch standard {
-	case zkcertificate.StandardKYC:
-		recordRegistry, err := contracts.NewKYCRecordRegistry(registryAddress, client)
-		if err != nil {
-			return nil, fmt.Errorf("bind kyc record registry contract: %w", err)
-		}
-
-		return recordRegistry, nil
-	default:
-		return nil, fmt.Errorf("standard %s is not supported", standard)
-	}
-}
 
 func ensureProviderIsGuardian(
 	client bind.ContractBackend,
@@ -282,7 +262,7 @@ func constructIssueZKCertTx(
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
 
-	return recordRegistry.AddZkKYCRecord(
+	return recordRegistry.AddZkCertificate(
 		auth,
 		big.NewInt(int64(emptyLeafIndex)),
 		leafHash.Bytes32(),
@@ -408,7 +388,7 @@ func processEvent(logEntry types.Log, registryEventParser RegistryEventParser, t
 
 	switch logEntry.Topics[0] {
 	case signatureRecordAddition:
-		eventAddition, err := registryEventParser.ParseZkKYCRecordAddition(logEntry)
+		eventAddition, err := registryEventParser.ParseZkCertificateAddition(logEntry)
 		if err != nil {
 			return fmt.Errorf("parse addition record event: %w", err)
 		}
@@ -416,12 +396,12 @@ func processEvent(logEntry types.Log, registryEventParser RegistryEventParser, t
 		index = int(eventAddition.Index.Int64())
 
 		var isOverflow bool
-		leafHash, isOverflow = uint256.FromBig(new(big.Int).SetBytes(eventAddition.ZkKYCRecordLeafHash[:]))
+		leafHash, isOverflow = uint256.FromBig(new(big.Int).SetBytes(eventAddition.ZkCertificateLeafHash[:]))
 		if isOverflow {
 			return fmt.Errorf("invalid leaf hash")
 		}
 	case signatureRecordRevocation:
-		eventRevocation, err := registryEventParser.ParseZkKYCRecordRevocation(logEntry)
+		eventRevocation, err := registryEventParser.ParseZkCertificateRevocation(logEntry)
 		if err != nil {
 			return fmt.Errorf("parse revocation record event: %w", err)
 		}

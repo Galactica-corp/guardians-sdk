@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
+	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
 )
@@ -98,7 +99,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 
 	registryAddress := certificate.Registration.Address
 
-	registry, err := loadRecordRegistry(client, registryAddress, certificate.Standard)
+	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
 	if err != nil {
 		return fmt.Errorf("load record registry: %w", err)
 	}
@@ -159,7 +160,7 @@ func constructRevokeZKCertTx(
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
 
-	return recordRegistry.RevokeZkKYCRecord(
+	return recordRegistry.RevokeZkCertificate(
 		auth,
 		big.NewInt(int64(leafIndex)),
 		leafHash.Bytes32(),
