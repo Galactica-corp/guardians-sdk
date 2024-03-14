@@ -68,22 +68,7 @@ func (k *SimpleJSON) UnmarshalJSON(data []byte) error {
 
 	for key, value := range tempMap {
 		switch v := value.(type) {
-		case string:
-			// Try to parse the string as a time.Time value
-			if t, err := time.Parse(time.RFC3339, v); err == nil {
-				decoded[key] = t
-			} else {
-				decoded[key] = v
-			}
-		case float64:
-			// Check if the float64 value has a decimal part
-			if v == float64(int64(v)) {
-				// If the value doesn't have a decimal part, convert it to int64
-				decoded[key] = int64(v)
-			} else {
-				decoded[key] = v
-			}
-		case bool:
+		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
 			decoded[key] = v
 		default:
 			return fmt.Errorf("unsupported type for field %s: %T", key, v)
@@ -105,8 +90,6 @@ func (c SimpleJSONContent) Standard() Standard {
 
 // Hash computes and returns the hash of the SimpleJSONContent instance.
 func (c SimpleJSONContent) Hash() (Hash, error) {
-	var hashInputs []*big.Int
-
 	// Get the sorted keys of the SimpleJSONContent map
 	keys := make([]string, 0, len(c))
 	for key := range c {
@@ -115,9 +98,10 @@ func (c SimpleJSONContent) Hash() (Hash, error) {
 	sort.Strings(keys)
 
 	// Iterate over the sorted keys and append the corresponding values to hashInputs
-	for _, key := range keys {
+	hashInputs := make([]*big.Int, len(c))
+	for i, key := range keys {
 		value := c[key]
-		hashInputs = append(hashInputs, value.BigInt())
+		hashInputs[i] = value.BigInt()
 	}
 
 	hash, err := poseidon.Hash(hashInputs)

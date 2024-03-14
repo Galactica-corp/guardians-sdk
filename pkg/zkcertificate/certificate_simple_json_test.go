@@ -72,10 +72,10 @@ func TestSimpleJSON_UnmarshalJSON(t *testing.T) {
 
 	expected := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       int64(30),
+		"age":       float64(30),
 		"isMarried": true,
 		"height":    1.75,
-		"birthday":  time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
+		"birthday":  "1990-01-01T00:00:00Z",
 	}
 	require.Equal(t, expected, simpleJSON)
 }
