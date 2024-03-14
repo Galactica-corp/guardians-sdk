@@ -57,4 +57,3 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/galactica-corp/guardians-sdk => github.com/jilio/guardians-sdk v0.0.0
