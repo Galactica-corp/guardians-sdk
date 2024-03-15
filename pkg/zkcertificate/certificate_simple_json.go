@@ -30,7 +30,7 @@ func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
 		switch v := value.(type) {
 		case string:
 			valueStr = v
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+		case float64:
 			valueStr = fmt.Sprintf("%v", v)
 		case bool:
 			valueStr = fmt.Sprintf("%t", v)
@@ -54,30 +54,12 @@ func (c *SimpleJSON) Validate() error {
 		return nil
 	}
 
-	keys := make([]string, 0, len(*c))
-	for key := range *c {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		value := (*c)[key]
-		var valueStr string
-
-		switch v := value.(type) {
-		case string:
-			valueStr = v
-		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-			valueStr = fmt.Sprintf("%v", v)
-		case bool:
-			valueStr = fmt.Sprintf("%t", v)
+	for key, value := range *c {
+		switch value.(type) {
+		case string, float64, bool:
+			// If the value is of an expected type, no action is needed.
 		default:
-			return fmt.Errorf("unsupported type for field %s: %T", key, v)
-		}
-
-		_, err := poseidon.HashBytes([]byte(valueStr))
-		if err != nil {
-			return fmt.Errorf("hash field %s: %w", key, err)
+			return fmt.Errorf("unsupported type for field %s: %T", key, value)
 		}
 	}
 
@@ -91,12 +73,11 @@ func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Create a new SimpleJSON map to store the decoded values
 	decoded := make(SimpleJSON)
 
 	for key, value := range tempMap {
 		switch v := value.(type) {
-		case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+		case string, float64, bool:
 			decoded[key] = v
 		default:
 			return fmt.Errorf("unsupported type for field %s: %T", key, v)
@@ -104,7 +85,8 @@ func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
 	}
 
 	*c = decoded
-	return nil
+
+	return c.Validate()
 }
 
 // SimpleJSONContent represents the hashed content of SimpleJSON data.

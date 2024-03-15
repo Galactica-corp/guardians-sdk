@@ -12,7 +12,7 @@ import (
 func TestSimpleJSON_Validate(t *testing.T) {
 	simpleJSON := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       30,
+		"age":       float64(30),
 		"isMarried": true,
 		"height":    1.75,
 		"birthday":  "1990-01-01T00:00:00Z",
@@ -24,7 +24,7 @@ func TestSimpleJSON_Validate(t *testing.T) {
 func TestSimpleJSON_FFEncode(t *testing.T) {
 	simpleJSON := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       30,
+		"age":       float64(30),
 		"isMarried": true,
 		"height":    1.75,
 		"birthday":  "1990-01-01T00:00:00Z",
