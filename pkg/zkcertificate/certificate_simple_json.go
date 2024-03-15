@@ -73,20 +73,14 @@ func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	decoded := make(SimpleJSON)
+	tempSimpleJSON := SimpleJSON(tempMap)
 
-	for key, value := range tempMap {
-		switch v := value.(type) {
-		case string, float64, bool:
-			decoded[key] = v
-		default:
-			return fmt.Errorf("unsupported type for field %s: %T", key, v)
-		}
+	if err := tempSimpleJSON.Validate(); err != nil {
+		return err
 	}
 
-	*c = decoded
-
-	return c.Validate()
+	*c = tempSimpleJSON
+	return nil
 }
 
 // SimpleJSONContent represents the hashed content of SimpleJSON data.
