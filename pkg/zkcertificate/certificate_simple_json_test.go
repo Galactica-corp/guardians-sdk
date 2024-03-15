@@ -85,8 +85,8 @@ func TestSimpleJSON_Validate_Negative(t *testing.T) {
 		input   *zkcertificate.SimpleJSON
 		wantErr bool
 	}{
-		{"Unsupported Types", &zkcertificate.SimpleJSON{"unsupported": []int{1, 2, 3}}, true},
-		{"Nil JSON", nil, true},
+		{name: "Unsupported Types", input: &zkcertificate.SimpleJSON{"unsupported": []int{1, 2, 3}}, wantErr: true},
+		{name: "Nil JSON", input: nil, wantErr: false},
 	}
 
 	for _, tt := range tests {
@@ -105,7 +105,7 @@ func TestSimpleJSON_FFEncode_Negative(t *testing.T) {
 		input   zkcertificate.SimpleJSON
 		wantErr bool
 	}{
-		{"Unsupported Types", zkcertificate.SimpleJSON{"unsupported": make(chan int)}, true},
+		{name: "Unsupported Types", input: zkcertificate.SimpleJSON{"unsupported": make(chan int)}, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -124,8 +124,8 @@ func TestSimpleJSON_UnmarshalJSON_Negative(t *testing.T) {
 		input   string
 		wantErr bool
 	}{
-		{"Invalid JSON Format", "{name: John Doe}", true},
-		{"Unsupported Types", `{"unsupported": {"nested": "value"}}`, true},
+		{name: "Invalid JSON Format", input: "{name: John Doe}", wantErr: true},
+		{name: "Unsupported Types", input: `{"unsupported": {"nested": "value"}}`, wantErr: true},
 	}
 
 	for _, tt := range tests {

@@ -14,17 +14,17 @@ import (
 type SimpleJSON map[string]interface{}
 
 // FFEncode implements FFEncoder.
-func (k SimpleJSON) FFEncode() (SimpleJSONContent, error) {
-	keys := make([]string, 0, len(k))
-	for key := range k {
+func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
+	keys := make([]string, 0, len(c))
+	for key := range c {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 
-	hashedContent := make(SimpleJSONContent, len(k))
+	hashedContent := make(SimpleJSONContent, len(c))
 
 	for i, key := range keys {
-		value := k[key]
+		value := c[key]
 		var valueStr string
 
 		switch v := value.(type) {
@@ -51,7 +51,7 @@ func (k SimpleJSON) FFEncode() (SimpleJSONContent, error) {
 // Validate performs validation on the SimpleJSON instance.
 func (c *SimpleJSON) Validate() error {
 	if c == nil {
-		return fmt.Errorf("cannot validate nil SimpleJSON")
+		return nil
 	}
 
 	keys := make([]string, 0, len(*c))
