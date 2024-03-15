@@ -23,8 +23,10 @@ import (
 // Standard represents a string that indicates the standard of Zero Knowledge certificates.
 type Standard string
 
-const StandardKYC Standard = "gip69"
-const StandardSimpleJSON Standard = "gip70"
+const (
+	StandardKYC        Standard = "gip1"
+	StandardSimpleJSON Standard = "gip2"
+)
 
 var allStandards = []string{
 	StandardKYC.String(),

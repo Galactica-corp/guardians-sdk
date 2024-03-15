@@ -66,7 +66,7 @@ $ galactica-guardian createZKCert -s standardA -H holder_commitment.json -i cert
 	}
 
 	cmd.Flags().StringVarP(&f.holderFilePath, "holder-commitment-file", "H", "", "path to a file containing holder commitment")
-	cmd.Flags().StringVarP(&f.certificateStandard, "standard", "s", zkcertificate.StandardKYC.String(), `standard identifies the type of zkCert. At the moment we only have “gip69” for ZkKYC`)
+	cmd.Flags().StringVarP(&f.certificateStandard, "standard", "s", zkcertificate.StandardKYC.String(), `standard identifies the type of zkCert`)
 	cmd.Flags().StringVarP(&f.certificateInputsFilePath, "certificate-inputs-file", "i", "", "path to a JSON file with inputs for a zkCert. Which specific input fields are required depends on the certificate type")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded EdDSA private key")
 	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "certificate.json", "path to a file where the certificate in JSON format should be saved")
