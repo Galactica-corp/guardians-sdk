@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -143,7 +144,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 
 func constructRevokeZKCertTx(
 	ctx context.Context,
-	client *ethclient.Client,
+	client ethereum.ChainIDReader,
 	providerKey *ecdsa.PrivateKey,
 	recordRegistry RecordRegistry,
 	leafIndex int,

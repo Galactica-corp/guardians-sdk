@@ -159,6 +159,18 @@ func readCertificateContent(
 		}
 
 		return certificateContent, nil
+	case zkcertificate.StandardSimpleJSON:
+		var inputs zkcertificate.SimpleJSON
+		if err := decodeJSONFile(filePath, &inputs); err != nil {
+			return nil, fmt.Errorf("read simple json: %w", err)
+		}
+
+		certificateContent, err := inputs.FFEncode()
+		if err != nil {
+			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
+		}
+
+		return certificateContent, nil
 	default:
 		return nil, fmt.Errorf("standard %q is not supported", standard)
 	}
