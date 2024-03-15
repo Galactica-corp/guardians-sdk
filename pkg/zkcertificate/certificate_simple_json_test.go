@@ -78,3 +78,79 @@ func TestSimpleJSON_UnmarshalJSON(t *testing.T) {
 	}
 	require.Equal(t, expected, simpleJSON)
 }
+
+func TestSimpleJSON_Validate_Negative(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   *zkcertificate.SimpleJSON
+		wantErr bool
+	}{
+		{"Unsupported Types", &zkcertificate.SimpleJSON{"unsupported": []int{1, 2, 3}}, true},
+		{"Nil JSON", nil, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SimpleJSON.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSimpleJSON_FFEncode_Negative(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   zkcertificate.SimpleJSON
+		wantErr bool
+	}{
+		{"Unsupported Types", zkcertificate.SimpleJSON{"unsupported": make(chan int)}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := tt.input.FFEncode()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SimpleJSON.FFEncode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSimpleJSON_UnmarshalJSON_Negative(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"Invalid JSON Format", "{name: John Doe}", true},
+		{"Unsupported Types", `{"unsupported": {"nested": "value"}}`, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var js zkcertificate.SimpleJSON
+			err := json.Unmarshal([]byte(tt.input), &js)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SimpleJSON.UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSimpleJSON_UnmarshalJSON_InvalidStructure(t *testing.T) {
+	jsonData := `["not", "a", "json", "object"]`
+
+	var simpleJSON zkcertificate.SimpleJSON
+	err := json.Unmarshal([]byte(jsonData), &simpleJSON)
+	require.Error(t, err)
+}
+
+func TestSimpleJSONContent_Standard(t *testing.T) {
+	content := zkcertificate.SimpleJSONContent{}
+
+	standard := content.Standard()
+
+	require.Equal(t, zkcertificate.StandardSimpleJSON, standard)
+}
