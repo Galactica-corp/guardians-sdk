@@ -24,8 +24,12 @@ import (
 type Standard string
 
 const StandardKYC Standard = "gip69"
+const StandardSimpleJSON Standard = "gip70"
 
-var allStandards = []string{StandardKYC.String()}
+var allStandards = []string{
+	StandardKYC.String(),
+	StandardSimpleJSON.String(),
+}
 
 // IsStandard returns true if given value is a valid Standard.
 func IsStandard(value string) bool {
