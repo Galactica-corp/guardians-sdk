@@ -25,8 +25,8 @@ import (
 )
 
 // SimpleJSON represents the input data for data that consists of
-// simple JSON fields: strings, numbers, and booleans.
-type SimpleJSON map[string]interface{}
+// simple JSON fields: strings only.
+type SimpleJSON map[string]string
 
 // FFEncode implements FFEncoder.
 func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
@@ -40,20 +40,8 @@ func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
 
 	for i, key := range keys {
 		value := c[key]
-		var valueStr string
 
-		switch v := value.(type) {
-		case string:
-			valueStr = v
-		case float64:
-			valueStr = fmt.Sprintf("%v", v)
-		case bool:
-			valueStr = fmt.Sprintf("%t", v)
-		default:
-			return nil, fmt.Errorf("unsupported type for field %s: %T", key, v)
-		}
-
-		hash, err := poseidon.HashBytes([]byte(valueStr))
+		hash, err := poseidon.HashBytes([]byte(value))
 		if err != nil {
 			return nil, fmt.Errorf("hash field %s: %w", key, err)
 		}
@@ -65,36 +53,17 @@ func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
 
 // Validate performs validation on the SimpleJSON instance.
 func (c *SimpleJSON) Validate() error {
-	if c == nil {
-		return nil
-	}
-
-	for key, value := range *c {
-		switch value.(type) {
-		case string, float64, bool:
-			// If the value is of an expected type, no action is needed.
-		default:
-			return fmt.Errorf("unsupported type for field %s: %T", key, value)
-		}
-	}
-
 	return nil
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
 func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
-	var tempMap map[string]interface{}
+	var tempMap map[string]string
 	if err := json.Unmarshal(data, &tempMap); err != nil {
 		return err
 	}
 
-	tempSimpleJSON := SimpleJSON(tempMap)
-
-	if err := tempSimpleJSON.Validate(); err != nil {
-		return err
-	}
-
-	*c = tempSimpleJSON
+	*c = SimpleJSON(tempMap)
 	return nil
 }
 

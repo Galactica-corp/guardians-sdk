@@ -27,9 +27,9 @@ import (
 func TestSimpleJSON_Validate(t *testing.T) {
 	simpleJSON := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       float64(30),
-		"isMarried": true,
-		"height":    1.75,
+		"age":       "30",
+		"isMarried": "true",
+		"height":    "1.75",
 		"birthday":  "1990-01-01T00:00:00Z",
 	}
 
@@ -39,9 +39,9 @@ func TestSimpleJSON_Validate(t *testing.T) {
 func TestSimpleJSON_FFEncode(t *testing.T) {
 	simpleJSON := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       float64(30),
-		"isMarried": true,
-		"height":    1.75,
+		"age":       "30",
+		"isMarried": "true",
+		"height":    "1.75",
 		"birthday":  "1990-01-01T00:00:00Z",
 	}
 
@@ -74,9 +74,9 @@ func TestSimpleJSONContent_Hash(t *testing.T) {
 func TestSimpleJSON_UnmarshalJSON(t *testing.T) {
 	jsonData := `{
 		"name": "John Doe",
-		"age": 30,
-		"isMarried": true,
-		"height": 1.75,
+		"age": "30",
+		"isMarried": "true",
+		"height": "1.75",
 		"birthday": "1990-01-01T00:00:00Z"
 	}`
 
@@ -86,51 +86,12 @@ func TestSimpleJSON_UnmarshalJSON(t *testing.T) {
 
 	expected := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
-		"age":       float64(30),
-		"isMarried": true,
-		"height":    1.75,
+		"age":       "30",
+		"isMarried": "true",
+		"height":    "1.75",
 		"birthday":  "1990-01-01T00:00:00Z",
 	}
 	require.Equal(t, expected, simpleJSON)
-}
-
-func TestSimpleJSON_Validate_Negative(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   *zkcertificate.SimpleJSON
-		wantErr bool
-	}{
-		{name: "Unsupported Types", input: &zkcertificate.SimpleJSON{"unsupported": []int{1, 2, 3}}, wantErr: true},
-		{name: "Nil JSON", input: nil, wantErr: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input.Validate()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SimpleJSON.Validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestSimpleJSON_FFEncode_Negative(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   zkcertificate.SimpleJSON
-		wantErr bool
-	}{
-		{name: "Unsupported Types", input: zkcertificate.SimpleJSON{"unsupported": make(chan int)}, wantErr: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.input.FFEncode()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SimpleJSON.FFEncode() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
 }
 
 func TestSimpleJSON_UnmarshalJSON_Negative(t *testing.T) {
