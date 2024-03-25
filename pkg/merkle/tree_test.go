@@ -27,7 +27,7 @@ import (
 func makeTree(t *testing.T) *merkle.Tree {
 	t.Helper()
 
-	tree, _ := merkle.NewEmptyTree(3, merkle.EmptyLeafValue)
+	tree, _ := merkle.NewEmptyTree(2, merkle.EmptyLeafValue)
 	_ = tree.SetLeaf(0, merkle.TreeNode{Value: uint256.NewInt(10)})
 	_ = tree.SetLeaf(1, merkle.TreeNode{Value: uint256.NewInt(20)})
 	_ = tree.SetLeaf(2, merkle.TreeNode{Value: uint256.NewInt(30)})
@@ -36,22 +36,22 @@ func makeTree(t *testing.T) *merkle.Tree {
 	return tree
 }
 
-func TestMakeEmptySparseTree(t *testing.T) {
+func TestMakeEmptyTree(t *testing.T) {
 	depth := 3
 
 	tree, err := merkle.NewEmptyTree(depth, merkle.EmptyLeafValue)
 	require.NoError(t, err)
 
-	require.Len(t, tree.Nodes, 1<<depth-1)
+	require.Len(t, tree.Nodes, 1<<(depth+1)-1)
 }
 
 func TestTree_depth8(t *testing.T) {
-	depth := 8
+	depth := 7
 
 	tree, err := merkle.NewEmptyTree(depth, merkle.EmptyLeafValue)
 	require.NoError(t, err)
 
-	require.Len(t, tree.Nodes, 1<<depth-1)
+	require.Len(t, tree.Nodes, 1<<(depth+1)-1)
 
 	err = tree.SetLeaf(0, merkle.TreeNode{Value: uint256.NewInt(42)})
 	require.NoError(t, err)
@@ -61,7 +61,7 @@ func TestTree_depth8(t *testing.T) {
 }
 
 func TestTree_SetLeaf(t *testing.T) {
-	depth := 3
+	depth := 2
 
 	tree, err := merkle.NewEmptyTree(depth, merkle.EmptyLeafValue)
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestTree_SetLeaf(t *testing.T) {
 }
 
 func TestTree_SetLeaf_outOfRange(t *testing.T) {
-	depth := 3
+	depth := 2
 
 	tree, err := merkle.NewEmptyTree(depth, merkle.EmptyLeafValue)
 	require.NoError(t, err)
@@ -97,7 +97,7 @@ func TestTree_GetProof(t *testing.T) {
 	proof, err := tree.GetProof(index)
 	require.NoError(t, err)
 
-	expectedPath := []merkle.TreeNode{tree.Nodes[6], tree.Nodes[1], tree.Nodes[0]}
+	expectedPath := []merkle.TreeNode{tree.Nodes[6], tree.Nodes[1]}
 	require.True(t, areTreeNodeSlicesEqual(expectedPath, proof.Path), "proof paths are not equal")
 	require.True(t, proof.Leaf.Value.Eq(tree.Nodes[5].Value))
 }
@@ -110,7 +110,7 @@ func TestTree_GetProof_outOfRange(t *testing.T) {
 }
 
 func TestTree_Root(t *testing.T) {
-	tree, err := merkle.NewEmptyTree(1, merkle.EmptyLeafValue)
+	tree, err := merkle.NewEmptyTree(0, merkle.EmptyLeafValue)
 	require.NoError(t, err)
 
 	root := tree.Root()

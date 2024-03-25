@@ -17,8 +17,8 @@ package merkle
 
 import (
 	"fmt"
-	"math"
 	"math/big"
+	"math/bits"
 
 	"github.com/holiman/uint256"
 	"github.com/iden3/go-iden3-crypto/ff"
@@ -70,15 +70,15 @@ func HashFunc(input []*big.Int) (*big.Int, error) {
 }
 
 func NewEmptyTree(depth int, leafValue *uint256.Int) (*Tree, error) {
-	if depth < 1 {
+	if depth < 0 {
 		return nil, fmt.Errorf("invalid tree depth")
 	}
 
-	nodes := make([]TreeNode, 1<<depth-1)
+	nodes := make([]TreeNode, 1<<(depth+1)-1)
 
 	firstNodeIndex := len(nodes)
 
-	for i, nodesAmount := 0, 1<<(depth-1); i < depth; i, nodesAmount = i+1, nodesAmount/2 {
+	for i, nodesAmount := 0, 1<<depth; i <= depth; i, nodesAmount = i+1, nodesAmount/2 {
 		firstNodeIndex -= nodesAmount
 
 		for j := 0; j < nodesAmount; j++ {
@@ -137,19 +137,17 @@ func (t *Tree) GetProof(i int) (Proof, error) {
 	j := len(t.Nodes) - leavesAmount + i
 
 	proof := Proof{
-		Path:      make([]TreeNode, int(math.Log2(float64(len(t.Nodes)+1)))),
+		Path:      make([]TreeNode, 0, bits.Len(uint(len(t.Nodes)))),
 		Leaf:      t.Nodes[j],
 		LeafIndex: i,
 	}
 
-	for level := 0; j > 0; j, level = GetParentIndex(j), level+1 {
+	for ; j > 0; j = GetParentIndex(j) {
 		siblingIndex := GetSiblingIndex(j)
 		sibling := t.Nodes[siblingIndex]
 
-		proof.Path[level] = sibling
+		proof.Path = append(proof.Path, sibling)
 	}
-
-	proof.Path[len(proof.Path)-1] = t.Root()
 
 	return proof, nil
 }
