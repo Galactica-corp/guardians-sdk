@@ -294,8 +294,8 @@ func buildAndSaveOutput[T any](
 
 // TODO: Deployed contract doesn't emit these events, it emits an older version of them
 var (
-	signatureRecordAddition   = crypto.Keccak256Hash([]byte("zkKYCRecordAddition(bytes32,address,uint)"))
-	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkKYCRecordRevocation(bytes32,address,uint)"))
+	signatureRecordAddition   = crypto.Keccak256Hash([]byte("zkCertificateAddition(bytes32,address,uint256)"))
+	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkCertificateRevocation(bytes32,address,uint256)"))
 )
 
 var blocksDistance = big.NewInt(10_000)

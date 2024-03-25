@@ -38,12 +38,12 @@ type KYCInputs struct {
 	Citizenship       string               `json:"citizenship" validate:"required,iso3166_1_alpha3"`
 	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
 	ExpirationDate    Timestamp            `json:"expirationDate"`
-	StreetAndNumber   string               `json:"streetAndNumber" validate:"required"`
+	StreetAndNumber   string               `json:"streetAndNumber"`
 	Postcode          string               `json:"postcode" validate:"required"`
-	Town              string               `json:"town" validate:"required"`
-	Region            string               `json:"region" validate:"omitempty,iso3166_2"`
+	Town              string               `json:"town"`
+	Region            string               `json:"region"`
 	Country           string               `json:"country" validate:"required,iso3166_1_alpha3"`
-	PassportID        string               `json:"passportID" validate:"required"`
+	PassportID        string               `json:"passportID"`
 }
 
 // FFEncode implements FFEncoder.
