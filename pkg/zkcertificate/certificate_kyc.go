@@ -37,13 +37,11 @@ type KYCInputs struct {
 	DayOfBirth        uint8                `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
 	Citizenship       string               `json:"citizenship" validate:"required,iso3166_1_alpha3"`
 	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
-	ExpirationDate    Timestamp            `json:"expirationDate"`
 	StreetAndNumber   string               `json:"streetAndNumber"`
-	Postcode          string               `json:"postcode" validate:"required"`
+	Postcode          string               `json:"postcode"`
 	Town              string               `json:"town"`
-	Region            string               `json:"region"`
+	Region            string               `json:"region" validate:"omitempty,iso3166_2"`
 	Country           string               `json:"country" validate:"required,iso3166_1_alpha3"`
-	PassportID        string               `json:"passportID"`
 }
 
 // FFEncode implements FFEncoder.
@@ -93,11 +91,6 @@ func (k KYCInputs) FFEncode() (KYCContent, error) {
 		return KYCContent{}, fmt.Errorf("hash citizenship: %w", err)
 	}
 
-	passportIDHash, err := poseidon.HashBytes([]byte(k.PassportID))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash passport id: %w", err)
-	}
-
 	return KYCContent{
 		Surname:           HashFromBigInt(surnameHash),
 		Forename:          HashFromBigInt(forenameHash),
@@ -106,14 +99,12 @@ func (k KYCInputs) FFEncode() (KYCContent, error) {
 		MonthOfBirth:      k.MonthOfBirth,
 		DayOfBirth:        k.DayOfBirth,
 		VerificationLevel: k.VerificationLevel,
-		ExpirationDate:    k.ExpirationDate,
 		StreetAndNumber:   HashFromBigInt(streetAndNumberHash),
 		Postcode:          HashFromBigInt(postcodeHash),
 		Town:              HashFromBigInt(townHash),
 		Region:            HashFromBigInt(regionHash),
 		Country:           HashFromBigInt(countryHash),
 		Citizenship:       HashFromBigInt(citizenshipHash),
-		PassportID:        HashFromBigInt(passportIDHash),
 	}, nil
 }
 
@@ -151,14 +142,12 @@ type KYCContent struct {
 	MonthOfBirth      uint8                `json:"monthOfBirth"`
 	DayOfBirth        uint8                `json:"dayOfBirth"`
 	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
-	ExpirationDate    Timestamp            `json:"expirationDate"`
 	StreetAndNumber   Hash                 `json:"streetAndNumber"`
 	Postcode          Hash                 `json:"postcode"`
 	Town              Hash                 `json:"town"`
 	Region            Hash                 `json:"region"`
 	Country           Hash                 `json:"country"`
 	Citizenship       Hash                 `json:"citizenship"`
-	PassportID        Hash                 `json:"passportID"`
 }
 
 // Standard returns the standard associated with the KYCContent, which is StandardKYC.
@@ -176,14 +165,12 @@ func (c KYCContent) Hash() (Hash, error) {
 		big.NewInt(int64(c.MonthOfBirth)),
 		big.NewInt(int64(c.DayOfBirth)),
 		big.NewInt(int64(c.VerificationLevel)),
-		big.NewInt(c.ExpirationDate.Unix()),
 		c.StreetAndNumber.BigInt(),
 		c.Postcode.BigInt(),
 		c.Town.BigInt(),
 		c.Region.BigInt(),
 		c.Country.BigInt(),
 		c.Citizenship.BigInt(),
-		c.PassportID.BigInt(),
 	})
 	if err != nil {
 		return Hash{}, err

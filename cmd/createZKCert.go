@@ -21,6 +21,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -32,6 +33,7 @@ type createZKCertFlags struct {
 	holderFilePath            string
 	certificateStandard       string
 	certificateInputsFilePath string
+	expirationDate            string
 	providerPrivateKeyPath    string
 	outputFilePath            string
 }
@@ -61,18 +63,20 @@ Once all the necessary components are in place, the ZKCert is created and saved
 to a JSON file for further use in the Galactica ecosystem.
 
 Example Usage:
-$ galactica-guardian createZKCert -s standardA -H holder_commitment.json -i certificate_inputs.json -k provider_private_key.hex -o output.json`,
+$ galactica-guardian createZKCert -s standardA -H holder_commitment.json -i certificate_inputs.json -e 2024-12-31T00:00:00.000Z -k provider_private_key.hex -o output.json`,
 		RunE: createZKCertCmd(&f),
 	}
 
 	cmd.Flags().StringVarP(&f.holderFilePath, "holder-commitment-file", "H", "", "path to a file containing holder commitment")
 	cmd.Flags().StringVarP(&f.certificateStandard, "standard", "s", zkcertificate.StandardKYC.String(), `standard identifies the type of zkCert`)
 	cmd.Flags().StringVarP(&f.certificateInputsFilePath, "certificate-inputs-file", "i", "", "path to a JSON file with inputs for a zkCert. Which specific input fields are required depends on the certificate type")
+	cmd.Flags().StringVarP(&f.expirationDate, "expiration-date", "e", "", "expiration date for the certificate in RFC3339 format")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded EdDSA private key")
 	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "certificate.json", "path to a file where the certificate in JSON format should be saved")
 
 	_ = cmd.MarkFlagRequired("holder-commitment-file")
 	_ = cmd.MarkFlagRequired("certificate-inputs-file")
+	_ = cmd.MarkFlagRequired("expiration-date")
 	_ = cmd.MarkFlagRequired("provider-private-key")
 
 	return cmd
@@ -93,6 +97,11 @@ func createZKCert(f *createZKCertFlags) error {
 	var holderCommitment zkcertificate.HolderCommitment
 	if err := decodeJSONFile(f.holderFilePath, &holderCommitment); err != nil {
 		return fmt.Errorf("read holder commitment: %w", err)
+	}
+
+	expirationDate, err := time.Parse(time.RFC3339, f.expirationDate)
+	if err != nil {
+		return fmt.Errorf("invalid expiration date: %w", err)
 	}
 
 	certificateContent, err := readCertificateContent(f.certificateInputsFilePath, standard)
@@ -128,6 +137,7 @@ func createZKCert(f *createZKCertFlags) error {
 		providerKey.Public(),
 		signature,
 		randomSalt,
+		expirationDate,
 	)
 	if err != nil {
 		return fmt.Errorf("create certificate: %w", err)
@@ -142,10 +152,7 @@ func createZKCert(f *createZKCertFlags) error {
 	return nil
 }
 
-func readCertificateContent(
-	filePath string,
-	standard zkcertificate.Standard,
-) (zkcertificate.Content, error) {
+func readCertificateContent(filePath string, standard zkcertificate.Standard) (zkcertificate.Content, error) {
 	switch standard {
 	case zkcertificate.StandardKYC:
 		var inputs zkcertificate.KYCInputs

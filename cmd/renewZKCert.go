@@ -90,7 +90,7 @@ func renewZKCert(f *renewZKCertFlags) error {
 		return fmt.Errorf("read certificate: %w", err)
 	}
 
-	certificateContent, err := setNewExpirationDate(certificate.Standard, certificate.Content, expirationDate)
+	certificateContent, err := decodeCertificateContent(certificate.Standard, certificate.Content)
 	if err != nil {
 		return fmt.Errorf("set new expiration date: %w", err)
 	}
@@ -123,6 +123,7 @@ func renewZKCert(f *renewZKCertFlags) error {
 		providerKey.Public(),
 		signature,
 		randomSalt,
+		expirationDate,
 	)
 	if err != nil {
 		return fmt.Errorf("create new certificate: %w", err)
@@ -150,10 +151,9 @@ galactica-guardian issueZKCert -c %s -k provider_private_key.hex -o issued-prolo
 	)
 }
 
-func setNewExpirationDate(
+func decodeCertificateContent(
 	certificateStandard zkcertificate.Standard,
 	certificateContent json.RawMessage,
-	expirationDate time.Time,
 ) (zkcertificate.Content, error) {
 	switch certificateStandard {
 	case zkcertificate.StandardKYC:
@@ -162,7 +162,13 @@ func setNewExpirationDate(
 			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
 		}
 
-		content.ExpirationDate = zkcertificate.Timestamp(expirationDate)
+		return content, nil
+	case zkcertificate.StandardSimpleJSON:
+		var content zkcertificate.SimpleJSONContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
+		}
+
 		return content, nil
 	default:
 		return nil, fmt.Errorf("unsupported certificate standard %s", certificateStandard)

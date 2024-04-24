@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -37,6 +38,7 @@ type Certificate[T any] struct {
 	Standard         Standard     `json:"zkCertStandard"`
 	Content          T            `json:"content"`
 	ContentHash      Hash         `json:"contentHash"`
+	ExpirationDate   Timestamp    `json:"expirationDate"`
 	Provider         ProviderData `json:"providerData"`
 	RandomSalt       int64        `json:"randomSalt"`
 }
@@ -65,6 +67,7 @@ func New[T Content](
 	providerPublicKey *babyjub.PublicKey,
 	providerSignature *babyjub.Signature,
 	salt int64,
+	expirationDate time.Time,
 ) (*Certificate[T], error) {
 	contentHash, err := content.Hash()
 	if err != nil {
@@ -79,7 +82,7 @@ func New[T Content](
 		return nil, fmt.Errorf("invalid signature")
 	}
 
-	leafHash, err := LeafHash(contentHash, providerPublicKey, providerSignature, holderCommitment, salt)
+	leafHash, err := LeafHash(contentHash, providerPublicKey, providerSignature, holderCommitment, salt, expirationDate)
 	if err != nil {
 		return nil, fmt.Errorf("compute leaf hash: %w", err)
 	}
@@ -93,6 +96,7 @@ func New[T Content](
 		Standard:         standard,
 		Content:          content,
 		ContentHash:      contentHash,
+		ExpirationDate:   Timestamp(expirationDate),
 		Provider: ProviderData{
 			PublicKey: *providerPublicKey,
 			Signature: *providerSignature,
@@ -214,6 +218,7 @@ func LeafHash(
 	signature *babyjub.Signature,
 	commitmentHash Hash,
 	salt int64,
+	expirationDate time.Time,
 ) (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
 		contentHash.BigInt(),
@@ -224,6 +229,7 @@ func LeafHash(
 		signature.R8.Y,
 		commitmentHash.BigInt(),
 		big.NewInt(salt),
+		big.NewInt(expirationDate.Unix()),
 	})
 	if err != nil {
 		return Hash{}, fmt.Errorf("compute hash: %w", err)
