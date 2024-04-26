@@ -279,7 +279,7 @@ func buildAndSaveOutput[T any](
 	outputFilePath string,
 	certificate zkcertificate.Certificate[T],
 	registryAddress common.Address,
-	chainID int,
+	chainID *big.Int,
 	leafIndex int,
 	proof merkle.Proof,
 ) error {

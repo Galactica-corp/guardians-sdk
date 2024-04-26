@@ -175,7 +175,7 @@ type IssuedCertificate[T any] struct {
 // RegistrationDetails represents details related to the registration of a certificate.
 type RegistrationDetails struct {
 	Address   common.Address `json:"address"`
-	ChainID   int            `json:"chainID"`
+	ChainID   *big.Int       `json:"chainID"`
 	Revocable bool           `json:"revocable"`
 	LeafIndex int            `json:"leafIndex"`
 }
