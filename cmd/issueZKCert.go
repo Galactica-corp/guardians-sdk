@@ -108,6 +108,11 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return fmt.Errorf("retrieve chain-id: %w", err)
+	}
+
 	registryAddress := f.registryAddress.Address()
 
 	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
@@ -144,7 +149,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
 
-	if err := buildAndSaveOutput(f.outputFilePath, certificate, registryAddress, emptyLeafIndex, proof); err != nil {
+	if err := buildAndSaveOutput(f.outputFilePath, certificate, registryAddress, chainID, emptyLeafIndex, proof); err != nil {
 		return fmt.Errorf("collect output: %w", err)
 	}
 
@@ -274,6 +279,7 @@ func buildAndSaveOutput[T any](
 	outputFilePath string,
 	certificate zkcertificate.Certificate[T],
 	registryAddress common.Address,
+	chainID *big.Int,
 	leafIndex int,
 	proof merkle.Proof,
 ) error {
@@ -281,6 +287,7 @@ func buildAndSaveOutput[T any](
 		Certificate: certificate,
 		Registration: zkcertificate.RegistrationDetails{
 			Address:   registryAddress,
+			ChainID:   chainID,
 			Revocable: true,
 			LeafIndex: leafIndex,
 		},
