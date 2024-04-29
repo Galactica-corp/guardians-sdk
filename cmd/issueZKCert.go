@@ -110,7 +110,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
-		return fmt.Errorf("could not retrieve chain-id: %w", err)
+		return fmt.Errorf("retrieve chain-id: %w", err)
 	}
 
 	registryAddress := f.registryAddress.Address()
