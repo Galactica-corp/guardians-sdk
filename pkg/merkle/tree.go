@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/merkle/indexer"
+	merkleProofService "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
 	"github.com/iden3/go-iden3-crypto/ff"
 	"golang.org/x/crypto/sha3"
@@ -60,13 +60,13 @@ func makeSeedForEmptyLeaf() []byte {
 	return hash.Sum(nil)
 }
 
-func GetProof(ctx context.Context, client indexer.QueryClient, registryAddress string, leaf string) (Proof, error) {
-	proofResp, err := client.Proof(ctx, &indexer.QueryProofRequest{
+func GetProof(ctx context.Context, client merkleProofService.QueryClient, registryAddress string, leaf string) (Proof, error) {
+	proofResp, err := client.Proof(ctx, &merkleProofService.QueryProofRequest{
 		Registry: registryAddress,
 		Leaf:     leaf,
 	})
 	if err != nil {
-		return Proof{}, fmt.Errorf("get Merkle proof: %w", err)
+		return Proof{}, fmt.Errorf("get merkle proof: %w", err)
 	}
 
 	sdkProof, err := toSDKProof(proofResp.Proof)
@@ -77,8 +77,8 @@ func GetProof(ctx context.Context, client indexer.QueryClient, registryAddress s
 	return sdkProof, nil
 }
 
-func GetEmptyIndex(ctx context.Context, client indexer.QueryClient, registryAddress string) (uint32, error) {
-	resp, err := client.GetEmptyIndex(ctx, &indexer.GetEmptyIndexRequest{Registry: registryAddress})
+func GetEmptyIndex(ctx context.Context, client merkleProofService.QueryClient, registryAddress string) (uint32, error) {
+	resp, err := client.GetEmptyIndex(ctx, &merkleProofService.GetEmptyIndexRequest{Registry: registryAddress})
 	if err != nil {
 		return 0, fmt.Errorf("get empty leaf index: %w", err)
 	}
@@ -86,7 +86,7 @@ func GetEmptyIndex(ctx context.Context, client indexer.QueryClient, registryAddr
 	return resp.Index, nil
 }
 
-func toSDKProof(proof *indexer.Proof) (Proof, error) {
+func toSDKProof(proof *merkleProofService.Proof) (Proof, error) {
 	path := make([]TreeNode, len(proof.Path))
 	for i, node := range proof.Path {
 		value, err := uint256.FromDecimal(node)
@@ -108,11 +108,11 @@ func toSDKProof(proof *indexer.Proof) (Proof, error) {
 	}, nil
 }
 
-func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (indexer.QueryClient, error) {
+func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (merkleProofService.QueryClient, error) {
 	conn, err := grpc.DialContext(ctx, merkleProofServiceHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("connect to Merkle Proof Service: %w", err)
 	}
 
-	return indexer.NewQueryClient(conn), nil
+	return merkleProofService.NewQueryClient(conn), nil
 }

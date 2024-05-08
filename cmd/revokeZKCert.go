@@ -127,7 +127,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 
 	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
 	if err != nil {
-		return fmt.Errorf("get Merkle proof: %w", err)
+		return fmt.Errorf("get merkle proof: %w", err)
 	}
 
 	tx, err := constructRevokeZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)

@@ -34,8 +34,8 @@ import (
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
-	"github.com/galactica-corp/guardians-sdk/pkg/merkle/indexer"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
+	merkleProofService "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 )
 
 type issueZKCertFlags struct {
@@ -231,7 +231,7 @@ func ensureProviderIsGuardian(
 
 func findEmptyTreeLeaf(
 	ctx context.Context,
-	client indexer.QueryClient,
+	client merkleProofService.QueryClient,
 	registryAddress common.Address,
 ) (int, merkle.Proof, error) {
 	emptyLeafIndex, err := merkle.GetEmptyIndex(ctx, client, registryAddress.Hex())
