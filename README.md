@@ -20,7 +20,8 @@ Once installed, you can use the Galactica Guardian CLI to perform various tasks.
 manage certificates, interact with the blockchain, and handle key operations. Each command supports the `--help` flag
 for detailed information and usage guidelines.
 
-The CLI **requires** the [Merkle Proof Service](https://github.com/Galactica-corp/merkle-proof-service) for issuing and revoking Zero Knowledge Certificates. Ensure that this service is running and accessible to perform these operations.
+The CLI **requires** the [Merkle Proof Service](https://github.com/Galactica-corp/merkle-proof-service) for issuing
+and revoking Zero Knowledge Certificates. Ensure that this service is running and accessible to perform these operations.
 
 ### Commands Overview
 

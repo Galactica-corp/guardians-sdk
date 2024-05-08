@@ -35,7 +35,7 @@ import (
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
-	merkleProofService "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
+	merkleproofservice "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 )
 
 type issueZKCertFlags struct {
@@ -77,12 +77,13 @@ $ galactica-guardian issueZKCert -c zkcert.json -k provider_private_key.hex -o o
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
-	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "localhost:50651", "Merkle Proof Service gRPC endpoint url")
+	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
 	_ = cmd.MarkFlagRequired("registry-address")
 	_ = cmd.MarkFlagRequired("rpc-url")
+	_ = cmd.MarkFlagRequired("merkle-proof-service-url")
 
 	return cmd
 }
@@ -228,7 +229,7 @@ func ensureProviderIsGuardian(
 
 func findEmptyTreeLeaf(
 	ctx context.Context,
-	client merkleProofService.QueryClient,
+	client merkleproofservice.QueryClient,
 	registryAddress common.Address,
 ) (int, merkle.Proof, error) {
 	emptyLeafIndex, err := merkle.GetEmptyIndex(ctx, client, registryAddress.Hex())
@@ -236,7 +237,7 @@ func findEmptyTreeLeaf(
 		return 0, merkle.Proof{}, fmt.Errorf("get empty leaf index: %w", err)
 	}
 
-	proof, err := merkle.GetProof(ctx, client, registryAddress.Hex(), merkle.EmptyLeafValue)
+	proof, err := merkle.GetProof(ctx, client, registryAddress.Hex(), merkle.EmptyLeafValue.String())
 	if err != nil {
 		return 0, merkle.Proof{}, fmt.Errorf("get merkle proof: %w", err)
 	}

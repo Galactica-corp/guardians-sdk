@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	merkleProofService "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
+	"github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
 	"github.com/iden3/go-iden3-crypto/ff"
 	"golang.org/x/crypto/sha3"
@@ -52,7 +52,7 @@ type Proof struct {
 var EmptyLeafValue = new(uint256.Int).Mod(
 	uint256.MustFromBig(new(big.Int).SetBytes(makeSeedForEmptyLeaf())),
 	uint256.MustFromBig(ff.Modulus()),
-).String()
+)
 
 func makeSeedForEmptyLeaf() []byte {
 	hash := sha3.NewLegacyKeccak256()
@@ -60,8 +60,8 @@ func makeSeedForEmptyLeaf() []byte {
 	return hash.Sum(nil)
 }
 
-func GetProof(ctx context.Context, client merkleProofService.QueryClient, registryAddress string, leaf string) (Proof, error) {
-	proofResp, err := client.Proof(ctx, &merkleProofService.QueryProofRequest{
+func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress string, leaf string) (Proof, error) {
+	proofResp, err := client.Proof(ctx, &merkle.QueryProofRequest{
 		Registry: registryAddress,
 		Leaf:     leaf,
 	})
@@ -77,8 +77,8 @@ func GetProof(ctx context.Context, client merkleProofService.QueryClient, regist
 	return sdkProof, nil
 }
 
-func GetEmptyIndex(ctx context.Context, client merkleProofService.QueryClient, registryAddress string) (uint32, error) {
-	resp, err := client.GetEmptyIndex(ctx, &merkleProofService.GetEmptyIndexRequest{Registry: registryAddress})
+func GetEmptyIndex(ctx context.Context, client merkle.QueryClient, registryAddress string) (uint32, error) {
+	resp, err := client.GetEmptyIndex(ctx, &merkle.GetEmptyIndexRequest{Registry: registryAddress})
 	if err != nil {
 		return 0, fmt.Errorf("get empty leaf index: %w", err)
 	}
@@ -86,7 +86,7 @@ func GetEmptyIndex(ctx context.Context, client merkleProofService.QueryClient, r
 	return resp.Index, nil
 }
 
-func toSDKProof(proof *merkleProofService.Proof) (Proof, error) {
+func toSDKProof(proof *merkle.Proof) (Proof, error) {
 	path := make([]TreeNode, len(proof.Path))
 	for i, node := range proof.Path {
 		value, err := uint256.FromDecimal(node)
@@ -108,11 +108,11 @@ func toSDKProof(proof *merkleProofService.Proof) (Proof, error) {
 	}, nil
 }
 
-func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (merkleProofService.QueryClient, error) {
+func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (merkle.QueryClient, error) {
 	conn, err := grpc.DialContext(ctx, merkleProofServiceHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("connect to Merkle Proof Service: %w", err)
 	}
 
-	return merkleProofService.NewQueryClient(conn), nil
+	return merkle.NewQueryClient(conn), nil
 }
