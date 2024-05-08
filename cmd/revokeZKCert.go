@@ -36,7 +36,6 @@ import (
 
 type revokeZKCertFlags struct {
 	certificateFilePath    string
-	firstBlock             int64
 	providerPrivateKeyPath string
 	rpcURL                 string
 	merkleProofServiceURL  string
@@ -67,7 +66,6 @@ $ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex`,
 	}
 
 	cmd.Flags().StringVarP(&f.certificateFilePath, "certificate-file", "c", "", "path to a file containing issued zkCert obtained using issueZKCert command")
-	cmd.Flags().Int64VarP(&f.firstBlock, "registry-events-start", "", 0, "block number in which first event was emitted by the registry. This block might be before the first event, but if it will be after, then it will lead to incorrect result. It greatly improves time to build a merkle tree, because RPC requests are limited to inspect at most 10'000 blocks at once")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "localhost:50651", "Merkle Proof Service gRPC endpoint url")
@@ -75,7 +73,6 @@ $ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex`,
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
 	_ = cmd.MarkFlagRequired("rpc-url")
-	_ = cmd.MarkFlagRequired("merkle-proof-service-url")
 
 	return cmd
 }

@@ -52,7 +52,7 @@ type Proof struct {
 var EmptyLeafValue = new(uint256.Int).Mod(
 	uint256.MustFromBig(new(big.Int).SetBytes(makeSeedForEmptyLeaf())),
 	uint256.MustFromBig(ff.Modulus()),
-)
+).String()
 
 func makeSeedForEmptyLeaf() []byte {
 	hash := sha3.NewLegacyKeccak256()
