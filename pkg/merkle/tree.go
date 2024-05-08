@@ -77,13 +77,18 @@ func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress st
 	return sdkProof, nil
 }
 
-func GetEmptyIndex(ctx context.Context, client merkle.QueryClient, registryAddress string) (uint32, error) {
-	resp, err := client.GetEmptyIndex(ctx, &merkle.GetEmptyIndexRequest{Registry: registryAddress})
+func GetEmptyLeafProof(ctx context.Context, client merkle.QueryClient, registryAddress string) (uint32, Proof, error) {
+	resp, err := client.GetEmptyLeafProof(ctx, &merkle.GetEmptyLeafProofRequest{Registry: registryAddress})
 	if err != nil {
-		return 0, fmt.Errorf("get empty leaf index: %w", err)
+		return 0, Proof{}, fmt.Errorf("get empty leaf index: %w", err)
 	}
 
-	return resp.Index, nil
+	sdkProof, err := toSDKProof(resp.Proof)
+	if err != nil {
+		return 0, Proof{}, fmt.Errorf("convert proof: %w", err)
+	}
+
+	return resp.Proof.Index, sdkProof, nil
 }
 
 func toSDKProof(proof *merkle.Proof) (Proof, error) {

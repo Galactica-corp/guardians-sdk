@@ -4,16 +4,14 @@ go 1.22.2
 
 require (
 	github.com/ethereum/go-ethereum v1.13.15
-	github.com/galactica-corp/merkle-proof-service v0.0.0-00010101000000-000000000000
+	github.com/galactica-corp/merkle-proof-service v0.2.1
 	github.com/go-playground/validator/v10 v10.19.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/holiman/uint256 v1.2.4
 	github.com/iden3/go-iden3-crypto v0.0.16
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.22.0
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
 )
 
 require (
@@ -35,6 +33,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
@@ -55,6 +54,7 @@ require (
 	golang.org/x/tools v0.20.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240415180920-8c6c420018be // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
