@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -16,14 +16,16 @@
 package merkle
 
 import (
+	"context"
 	"fmt"
 	"math/big"
-	"math/bits"
 
+	"github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
 	"github.com/iden3/go-iden3-crypto/ff"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type TreeNode struct {
@@ -41,10 +43,6 @@ func (n TreeNode) MarshalText() (text []byte, err error) {
 	return []byte(n.Value.Dec()), nil
 }
 
-type Tree struct {
-	Nodes []TreeNode
-}
-
 type Proof struct {
 	Leaf      TreeNode   `json:"leaf"`      // The Merkle tree node, which authenticity is proved by the Path.
 	LeafIndex int        `json:"leafIndex"` // Index of the Leaf in the Merkle tree.
@@ -59,141 +57,67 @@ var EmptyLeafValue = new(uint256.Int).Mod(
 func makeSeedForEmptyLeaf() []byte {
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte("Galactica"))
-
 	return hash.Sum(nil)
 }
 
-const TreeDepth = 32
+func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress string, leaf string) (Proof, error) {
+	proofResp, err := client.Proof(ctx, &merkle.QueryProofRequest{
+		Registry: registryAddress,
+		Leaf:     leaf,
+	})
+	if err != nil {
+		return Proof{}, fmt.Errorf("get merkle proof: %w", err)
+	}
 
-func HashFunc(input []*big.Int) (*big.Int, error) {
-	return poseidon.Hash(input)
+	sdkProof, err := toSDKProof(proofResp.Proof)
+	if err != nil {
+		return Proof{}, fmt.Errorf("convert proof: %w", err)
+	}
+
+	return sdkProof, nil
 }
 
-func NewEmptyTree(depth int, leafValue *uint256.Int) (*Tree, error) {
-	if depth < 0 {
-		return nil, fmt.Errorf("invalid tree depth")
+func GetEmptyLeafProof(ctx context.Context, client merkle.QueryClient, registryAddress string) (uint32, Proof, error) {
+	resp, err := client.GetEmptyLeafProof(ctx, &merkle.GetEmptyLeafProofRequest{Registry: registryAddress})
+	if err != nil {
+		return 0, Proof{}, fmt.Errorf("get empty leaf index: %w", err)
 	}
 
-	nodes := make([]TreeNode, 1<<(depth+1)-1)
-
-	firstNodeIndex := len(nodes)
-
-	for i, nodesAmount := 0, 1<<depth; i <= depth; i, nodesAmount = i+1, nodesAmount/2 {
-		firstNodeIndex -= nodesAmount
-
-		for j := 0; j < nodesAmount; j++ {
-			nodes[firstNodeIndex+j].Value = leafValue
-		}
-
-		if firstNodeIndex > 0 {
-			node, err := computeChildrenHash(firstNodeIndex-1, nodes)
-			if err != nil {
-				return nil, fmt.Errorf("compute hash: %w", err)
-			}
-
-			leafValue = node.Value
-		}
+	sdkProof, err := toSDKProof(resp.Proof)
+	if err != nil {
+		return 0, Proof{}, fmt.Errorf("convert proof: %w", err)
 	}
 
-	return &Tree{
-		Nodes: nodes,
+	return resp.Proof.Index, sdkProof, nil
+}
+
+func toSDKProof(proof *merkle.Proof) (Proof, error) {
+	path := make([]TreeNode, len(proof.Path))
+	for i, node := range proof.Path {
+		value, err := uint256.FromDecimal(node)
+		if err != nil {
+			return Proof{}, fmt.Errorf("convert path node value: %w", err)
+		}
+		path[i] = TreeNode{Value: value}
+	}
+
+	leaf, err := uint256.FromDecimal(proof.Leaf)
+	if err != nil {
+		return Proof{}, fmt.Errorf("convert leaf value: %w", err)
+	}
+
+	return Proof{
+		Leaf:      TreeNode{Value: leaf},
+		LeafIndex: int(proof.Index),
+		Path:      path,
 	}, nil
 }
 
-func (t *Tree) SetLeaf(i int, val TreeNode) error {
-	leavesAmount := t.GetLeavesAmount()
-
-	if i >= leavesAmount || i < 0 {
-		return fmt.Errorf("invalid leaf index")
-	}
-
-	j := len(t.Nodes) - leavesAmount + i
-	t.Nodes[j] = val
-
-	for j := GetParentIndex(j); j > 0; j = GetParentIndex(j) {
-		var err error
-		t.Nodes[j], err = computeChildrenHash(j, t.Nodes)
-		if err != nil {
-			return fmt.Errorf("compute hash: %w", err)
-		}
-	}
-
-	var err error
-	t.Nodes[0], err = computeChildrenHash(0, t.Nodes)
+func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (merkle.QueryClient, error) {
+	conn, err := grpc.DialContext(ctx, merkleProofServiceHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return fmt.Errorf("compute hash: %w", err)
+		return nil, fmt.Errorf("connect to Merkle Proof Service: %w", err)
 	}
 
-	return nil
-}
-
-func (t *Tree) GetProof(i int) (Proof, error) {
-	leavesAmount := t.GetLeavesAmount()
-
-	if i >= leavesAmount || i < 0 {
-		return Proof{}, fmt.Errorf("invalid leaf index")
-	}
-
-	j := len(t.Nodes) - leavesAmount + i
-
-	proof := Proof{
-		Path:      make([]TreeNode, 0, bits.Len(uint(len(t.Nodes)))),
-		Leaf:      t.Nodes[j],
-		LeafIndex: i,
-	}
-
-	for ; j > 0; j = GetParentIndex(j) {
-		siblingIndex := GetSiblingIndex(j)
-		sibling := t.Nodes[siblingIndex]
-
-		proof.Path = append(proof.Path, sibling)
-	}
-
-	return proof, nil
-}
-
-func (t *Tree) Root() TreeNode {
-	return t.Nodes[0]
-}
-
-func (t *Tree) GetLeavesAmount() int {
-	return (len(t.Nodes) + 1) / 2
-}
-
-func GetParentIndex(i int) int {
-	return (i - 1) / 2
-}
-
-func GetSiblingIndex(i int) int {
-	if IsRightChild(i) {
-		return i - 1
-	}
-
-	return i + 1
-}
-
-func IsRightChild(i int) bool {
-	return i%2 == 0
-}
-
-func computeChildrenHash(i int, nodes []TreeNode) (TreeNode, error) {
-	return computeNodeHash(getChildrenOf(i, nodes))
-}
-
-func computeNodeHash(left, right TreeNode) (TreeNode, error) {
-	val, err := HashFunc([]*big.Int{left.Value.ToBig(), right.Value.ToBig()})
-	if err != nil {
-		return TreeNode{}, err
-	}
-
-	convertedVal, isOverflow := uint256.FromBig(val)
-	if isOverflow {
-		return TreeNode{}, fmt.Errorf("invalid hash")
-	}
-
-	return TreeNode{Value: convertedVal}, nil
-}
-
-func getChildrenOf(i int, nodes []TreeNode) (TreeNode, TreeNode) {
-	return nodes[i*2+1], nodes[i*2+2]
+	return merkle.NewQueryClient(conn), nil
 }

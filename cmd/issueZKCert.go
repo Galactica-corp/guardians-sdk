@@ -24,20 +24,18 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/holiman/uint256"
-	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
+	merkleproofservice "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 )
 
 type issueZKCertFlags struct {
@@ -46,7 +44,7 @@ type issueZKCertFlags struct {
 	providerPrivateKeyPath string
 	rpcURL                 string
 	registryAddress        cli.Address
-	firstBlock             int64
+	merkleProofServiceURL  string
 }
 
 func NewCmdIssueZKCert() *cobra.Command {
@@ -78,13 +76,14 @@ $ galactica-guardian issueZKCert -c zkcert.json -k provider_private_key.hex -o o
 	cmd.Flags().StringVarP(&f.outputFilePath, "output-file", "o", "issued-certificate.json", "path to a file where the issued certificate in JSON format should be saved")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
-	cmd.Flags().Int64VarP(&f.firstBlock, "registry-events-start", "", 0, "block number in which first event was emitted by the registry. This block might be before the first event, but if it will be after, then it will lead to incorrect result. It greatly improves time to build a merkle tree, because RPC requests are limited to inspect at most 10'000 blocks at once")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
+	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
 	_ = cmd.MarkFlagRequired("registry-address")
 	_ = cmd.MarkFlagRequired("rpc-url")
+	_ = cmd.MarkFlagRequired("merkle-proof-service-url")
 
 	return cmd
 }
@@ -108,6 +107,11 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL)
+	if err != nil {
+		return fmt.Errorf("connect to merkle proof service: %w", err)
+	}
+
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
 		return fmt.Errorf("retrieve chain-id: %w", err)
@@ -129,7 +133,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	emptyLeafIndex, proof, err := findEmptyTreeLeaf(ctx, client, registryAddress, registry, f.firstBlock)
+	emptyLeafIndex, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
 	if err != nil {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
@@ -225,27 +229,15 @@ func ensureProviderIsGuardian(
 
 func findEmptyTreeLeaf(
 	ctx context.Context,
-	client *ethclient.Client,
+	client merkleproofservice.QueryClient,
 	registryAddress common.Address,
-	recordRegistry RegistryEventParser,
-	registryFirstEventBlockNumber int64,
 ) (int, merkle.Proof, error) {
-	tree, err := buildMerkleTreeFromEvents(ctx, client, registryAddress, recordRegistry, registryFirstEventBlockNumber)
+	emptyLeafIndex, proof, err := merkle.GetEmptyLeafProof(ctx, client, registryAddress.Hex())
 	if err != nil {
-		return 0, merkle.Proof{}, fmt.Errorf("build merkle tree from events: %w", err)
+		return 0, merkle.Proof{}, fmt.Errorf("get empty leaf proof: %w", err)
 	}
 
-	emptyLeafIndex, err := findFirstEmptyLeafIndex(tree)
-	if err != nil {
-		return 0, merkle.Proof{}, fmt.Errorf("find first empty leaf index: %w", err)
-	}
-
-	proof, err := tree.GetProof(emptyLeafIndex)
-	if err != nil {
-		return 0, merkle.Proof{}, fmt.Errorf("compute merkle proof: %w", err)
-	}
-
-	return emptyLeafIndex, proof, nil
+	return int(emptyLeafIndex), proof, nil
 }
 
 func constructIssueZKCertTx(
@@ -308,134 +300,6 @@ var (
 var blocksDistance = big.NewInt(10_000)
 
 var blockDistancePlusOne = new(big.Int).Add(blocksDistance, big.NewInt(1))
-
-func newProgressBar(max int64) *progressbar.ProgressBar {
-	return progressbar.NewOptions64(
-		max,
-		progressbar.OptionSetDescription("Query blockchain events to build the Merkle tree"),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionSetWidth(10),
-		progressbar.OptionThrottle(65*time.Millisecond),
-		progressbar.OptionShowCount(),
-		progressbar.OptionShowIts(),
-		progressbar.OptionSetItsString("block"),
-		progressbar.OptionOnCompletion(func() {
-			_, _ = fmt.Fprint(os.Stderr, "\n")
-		}),
-		progressbar.OptionSpinnerType(14),
-		progressbar.OptionFullWidth(),
-		progressbar.OptionSetRenderBlankState(true),
-	)
-}
-
-func buildMerkleTreeFromEvents(
-	ctx context.Context,
-	client *ethclient.Client,
-	registryAddress common.Address,
-	registryEventParser RegistryEventParser,
-	firstBlock int64,
-) (*merkle.Tree, error) {
-	tree, err := merkle.NewEmptyTree(merkle.TreeDepth, merkle.EmptyLeafValue)
-	if err != nil {
-		return nil, fmt.Errorf("initialize empty tree: %w", err)
-	}
-
-	head, err := client.BlockNumber(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve head block number: %w", err)
-	}
-
-	headBlock := big.NewInt(int64(head))
-
-	bar := newProgressBar(int64(head) - firstBlock)
-
-	for i := big.NewInt(firstBlock); i.Cmp(headBlock) == -1; i.Add(i, blockDistancePlusOne) {
-		fromBlock := new(big.Int).Set(i)
-		toBlock := new(big.Int).Add(fromBlock, blocksDistance)
-		if toBlock.Cmp(headBlock) == 1 {
-			toBlock = new(big.Int).Set(headBlock)
-		}
-
-		logs, err := client.FilterLogs(ctx, ethereum.FilterQuery{
-			FromBlock: fromBlock,
-			ToBlock:   toBlock,
-			Addresses: []common.Address{registryAddress},
-			Topics:    [][]common.Hash{{signatureRecordAddition, signatureRecordRevocation}},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("execute filter query: %w", err)
-		}
-
-		for _, logEntry := range logs {
-			if err := processEvent(logEntry, registryEventParser, tree); err != nil {
-				return nil, err
-			}
-		}
-
-		blockRangeLength := new(big.Int).Sub(toBlock, fromBlock).Int64()
-		if toBlock.Cmp(headBlock) != 0 {
-			blockRangeLength++ // because it is a closed range
-		}
-
-		_ = bar.Add64(blockRangeLength)
-	}
-
-	_ = bar.Finish()
-
-	return tree, nil
-}
-
-func processEvent(logEntry types.Log, registryEventParser RegistryEventParser, tree *merkle.Tree) error {
-	if logEntry.Removed {
-		return fmt.Errorf("not supported: log is removed due to chain reorganisation")
-	}
-
-	var index int
-	var leafHash *uint256.Int
-
-	switch logEntry.Topics[0] {
-	case signatureRecordAddition:
-		eventAddition, err := registryEventParser.ParseZkCertificateAddition(logEntry)
-		if err != nil {
-			return fmt.Errorf("parse addition record event: %w", err)
-		}
-
-		index = int(eventAddition.Index.Int64())
-
-		var isOverflow bool
-		leafHash, isOverflow = uint256.FromBig(new(big.Int).SetBytes(eventAddition.ZkCertificateLeafHash[:]))
-		if isOverflow {
-			return fmt.Errorf("invalid leaf hash")
-		}
-	case signatureRecordRevocation:
-		eventRevocation, err := registryEventParser.ParseZkCertificateRevocation(logEntry)
-		if err != nil {
-			return fmt.Errorf("parse revocation record event: %w", err)
-		}
-
-		index = int(eventRevocation.Index.Int64())
-		leafHash = merkle.EmptyLeafValue
-	}
-
-	if err := tree.SetLeaf(index, merkle.TreeNode{Value: leafHash}); err != nil {
-		return fmt.Errorf("set leaf: %w", err)
-	}
-
-	return nil
-}
-
-func findFirstEmptyLeafIndex(tree *merkle.Tree) (int, error) {
-	leavesAmount := tree.GetLeavesAmount()
-	offset := len(tree.Nodes) - leavesAmount
-
-	for i := 0; i < leavesAmount; i++ {
-		if tree.Nodes[offset+i].Value.Eq(merkle.EmptyLeafValue) {
-			return i, nil
-		}
-	}
-
-	return 0, fmt.Errorf("tree is full")
-}
 
 func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	res := make([][32]byte, len(proof.Path))

@@ -25,10 +25,8 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
@@ -38,9 +36,9 @@ import (
 
 type revokeZKCertFlags struct {
 	certificateFilePath    string
-	firstBlock             int64
 	providerPrivateKeyPath string
 	rpcURL                 string
+	merkleProofServiceURL  string
 }
 
 func NewCmdRevokeZKCert() *cobra.Command {
@@ -68,13 +66,14 @@ $ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex`,
 	}
 
 	cmd.Flags().StringVarP(&f.certificateFilePath, "certificate-file", "c", "", "path to a file containing issued zkCert obtained using issueZKCert command")
-	cmd.Flags().Int64VarP(&f.firstBlock, "registry-events-start", "", 0, "block number in which first event was emitted by the registry. This block might be before the first event, but if it will be after, then it will lead to incorrect result. It greatly improves time to build a merkle tree, because RPC requests are limited to inspect at most 10'000 blocks at once")
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
+	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
 	_ = cmd.MarkFlagRequired("rpc-url")
+	_ = cmd.MarkFlagRequired("merkle-proof-service-url")
 
 	return cmd
 }
@@ -98,6 +97,11 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL)
+	if err != nil {
+		return fmt.Errorf("connect to merkle proof service: %w", err)
+	}
+
 	registryAddress := certificate.Registration.Address
 
 	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
@@ -119,9 +123,9 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 	leafIndex := certificate.Registration.LeafIndex
 	leafHash := certificate.LeafHash
 
-	proof, err := buildMerkleProof(ctx, client, registryAddress, registry, leafIndex, leafHash, f.firstBlock)
+	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
 	if err != nil {
-		return fmt.Errorf("build merkle proof: %w", err)
+		return fmt.Errorf("get merkle proof: %w", err)
 	}
 
 	tx, err := constructRevokeZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
@@ -167,30 +171,4 @@ func constructRevokeZKCertTx(
 		leafHash.Bytes32(),
 		encodeMerkleProof(proof),
 	)
-}
-
-func buildMerkleProof(
-	ctx context.Context,
-	client *ethclient.Client,
-	registryAddress common.Address,
-	registry RegistryEventParser,
-	leafIndex int,
-	leafHash zkcertificate.Hash,
-	firstBlock int64,
-) (merkle.Proof, error) {
-	tree, err := buildMerkleTreeFromEvents(ctx, client, registryAddress, registry, firstBlock)
-	if err != nil {
-		return merkle.Proof{}, fmt.Errorf("build merkle tree from events: %w", err)
-	}
-
-	proof, err := tree.GetProof(leafIndex)
-	if err != nil {
-		return merkle.Proof{}, err
-	}
-
-	if proof.Path[0].Value.ToBig().Cmp(leafHash.BigInt()) != 0 {
-		return merkle.Proof{}, fmt.Errorf("incorrect leaf hash at specfied leaf index")
-	}
-
-	return proof, nil
 }
