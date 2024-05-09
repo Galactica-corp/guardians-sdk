@@ -234,7 +234,7 @@ func findEmptyTreeLeaf(
 ) (int, merkle.Proof, error) {
 	emptyLeafIndex, proof, err := merkle.GetEmptyLeafProof(ctx, client, registryAddress.Hex())
 	if err != nil {
-		return 0, merkle.Proof{}, fmt.Errorf("get empty leaf index: %w", err)
+		return 0, merkle.Proof{}, fmt.Errorf("get empty leaf proof: %w", err)
 	}
 
 	return int(emptyLeafIndex), proof, nil
