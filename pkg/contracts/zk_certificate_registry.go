@@ -23,7 +23,7 @@ import (
 	"math/big"
 	"strings"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -46,7 +46,7 @@ var (
 
 // ZkCertificateRegistryMetaData contains all meta data concerning the ZkCertificateRegistry contract.
 var ZkCertificateRegistryMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"GuardianRegistry_\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"_description\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"zkCertificateLeafHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"Guardian\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"zkCertificateAddition\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"zkCertificateLeafHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"Guardian\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"zkCertificateRevocation\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ZERO_VALUE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"ZkCertificateToGuardian\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_GuardianRegistry\",\"outputs\":[{\"internalType\":\"contractGuardianRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"zkCertificateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"addZkCertificate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"description\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_left\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_right\",\"type\":\"bytes32\"}],\"name\":\"hashLeftRight\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"merkleRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextLeafIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"zkCertificateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"revokeZkCertificate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"zeros\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"GuardianRegistry_\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"treeDepth_\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"description_\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"zkCertificateLeafHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"Guardian\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"zkCertificateAddition\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"zkCertificateLeafHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"Guardian\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"zkCertificateRevocation\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ZERO_VALUE\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"ZkCertificateToGuardian\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_GuardianRegistry\",\"outputs\":[{\"internalType\":\"contractGuardianRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"zkCertificateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"addZkCertificate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"description\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMerkleRoots\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"\",\"type\":\"bytes32[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_left\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_right\",\"type\":\"bytes32\"}],\"name\":\"hashLeftRight\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initBlockHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"merkleRoot\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"merkleRootIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"merkleRootValidIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"merkleRoots\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextLeafIndex\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"leafIndex\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"zkCertificateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32[]\",\"name\":\"merkleProof\",\"type\":\"bytes32[]\"}],\"name\":\"revokeZkCertificate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"treeDepth\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"treeSize\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_merkleRoot\",\"type\":\"bytes32\"}],\"name\":\"verifyMerkleRoot\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 }
 
 // ZkCertificateRegistryABI is the input ABI used to generate the binding from.
@@ -319,6 +319,37 @@ func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) Description() 
 	return _ZkCertificateRegistry.Contract.Description(&_ZkCertificateRegistry.CallOpts)
 }
 
+// GetMerkleRoots is a free data retrieval call binding the contract method 0x85135a1a.
+//
+// Solidity: function getMerkleRoots() view returns(bytes32[])
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) GetMerkleRoots(opts *bind.CallOpts) ([][32]byte, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "getMerkleRoots")
+
+	if err != nil {
+		return *new([][32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
+
+	return out0, err
+
+}
+
+// GetMerkleRoots is a free data retrieval call binding the contract method 0x85135a1a.
+//
+// Solidity: function getMerkleRoots() view returns(bytes32[])
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) GetMerkleRoots() ([][32]byte, error) {
+	return _ZkCertificateRegistry.Contract.GetMerkleRoots(&_ZkCertificateRegistry.CallOpts)
+}
+
+// GetMerkleRoots is a free data retrieval call binding the contract method 0x85135a1a.
+//
+// Solidity: function getMerkleRoots() view returns(bytes32[])
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) GetMerkleRoots() ([][32]byte, error) {
+	return _ZkCertificateRegistry.Contract.GetMerkleRoots(&_ZkCertificateRegistry.CallOpts)
+}
+
 // HashLeftRight is a free data retrieval call binding the contract method 0x38bf282e.
 //
 // Solidity: function hashLeftRight(bytes32 _left, bytes32 _right) pure returns(bytes32)
@@ -348,6 +379,37 @@ func (_ZkCertificateRegistry *ZkCertificateRegistrySession) HashLeftRight(_left 
 // Solidity: function hashLeftRight(bytes32 _left, bytes32 _right) pure returns(bytes32)
 func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) HashLeftRight(_left [32]byte, _right [32]byte) ([32]byte, error) {
 	return _ZkCertificateRegistry.Contract.HashLeftRight(&_ZkCertificateRegistry.CallOpts, _left, _right)
+}
+
+// InitBlockHeight is a free data retrieval call binding the contract method 0xef4b4119.
+//
+// Solidity: function initBlockHeight() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) InitBlockHeight(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "initBlockHeight")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// InitBlockHeight is a free data retrieval call binding the contract method 0xef4b4119.
+//
+// Solidity: function initBlockHeight() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) InitBlockHeight() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.InitBlockHeight(&_ZkCertificateRegistry.CallOpts)
+}
+
+// InitBlockHeight is a free data retrieval call binding the contract method 0xef4b4119.
+//
+// Solidity: function initBlockHeight() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) InitBlockHeight() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.InitBlockHeight(&_ZkCertificateRegistry.CallOpts)
 }
 
 // MerkleRoot is a free data retrieval call binding the contract method 0x2eb4a7ab.
@@ -381,6 +443,99 @@ func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) MerkleRoot() (
 	return _ZkCertificateRegistry.Contract.MerkleRoot(&_ZkCertificateRegistry.CallOpts)
 }
 
+// MerkleRootIndex is a free data retrieval call binding the contract method 0x390f2b65.
+//
+// Solidity: function merkleRootIndex(bytes32 ) view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) MerkleRootIndex(opts *bind.CallOpts, arg0 [32]byte) (*big.Int, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "merkleRootIndex", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MerkleRootIndex is a free data retrieval call binding the contract method 0x390f2b65.
+//
+// Solidity: function merkleRootIndex(bytes32 ) view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) MerkleRootIndex(arg0 [32]byte) (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRootIndex(&_ZkCertificateRegistry.CallOpts, arg0)
+}
+
+// MerkleRootIndex is a free data retrieval call binding the contract method 0x390f2b65.
+//
+// Solidity: function merkleRootIndex(bytes32 ) view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) MerkleRootIndex(arg0 [32]byte) (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRootIndex(&_ZkCertificateRegistry.CallOpts, arg0)
+}
+
+// MerkleRootValidIndex is a free data retrieval call binding the contract method 0xb0033450.
+//
+// Solidity: function merkleRootValidIndex() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) MerkleRootValidIndex(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "merkleRootValidIndex")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MerkleRootValidIndex is a free data retrieval call binding the contract method 0xb0033450.
+//
+// Solidity: function merkleRootValidIndex() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) MerkleRootValidIndex() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRootValidIndex(&_ZkCertificateRegistry.CallOpts)
+}
+
+// MerkleRootValidIndex is a free data retrieval call binding the contract method 0xb0033450.
+//
+// Solidity: function merkleRootValidIndex() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) MerkleRootValidIndex() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRootValidIndex(&_ZkCertificateRegistry.CallOpts)
+}
+
+// MerkleRoots is a free data retrieval call binding the contract method 0x71c5ecb1.
+//
+// Solidity: function merkleRoots(uint256 ) view returns(bytes32)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) MerkleRoots(opts *bind.CallOpts, arg0 *big.Int) ([32]byte, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "merkleRoots", arg0)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// MerkleRoots is a free data retrieval call binding the contract method 0x71c5ecb1.
+//
+// Solidity: function merkleRoots(uint256 ) view returns(bytes32)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) MerkleRoots(arg0 *big.Int) ([32]byte, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRoots(&_ZkCertificateRegistry.CallOpts, arg0)
+}
+
+// MerkleRoots is a free data retrieval call binding the contract method 0x71c5ecb1.
+//
+// Solidity: function merkleRoots(uint256 ) view returns(bytes32)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) MerkleRoots(arg0 *big.Int) ([32]byte, error) {
+	return _ZkCertificateRegistry.Contract.MerkleRoots(&_ZkCertificateRegistry.CallOpts, arg0)
+}
+
 // NextLeafIndex is a free data retrieval call binding the contract method 0x0be4f422.
 //
 // Solidity: function nextLeafIndex() view returns(uint256)
@@ -412,35 +567,97 @@ func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) NextLeafIndex(
 	return _ZkCertificateRegistry.Contract.NextLeafIndex(&_ZkCertificateRegistry.CallOpts)
 }
 
-// Zeros is a free data retrieval call binding the contract method 0xe8295588.
+// TreeDepth is a free data retrieval call binding the contract method 0x16a56c41.
 //
-// Solidity: function zeros(uint256 ) view returns(bytes32)
-func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) Zeros(opts *bind.CallOpts, arg0 *big.Int) ([32]byte, error) {
+// Solidity: function treeDepth() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) TreeDepth(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _ZkCertificateRegistry.contract.Call(opts, &out, "zeros", arg0)
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "treeDepth")
 
 	if err != nil {
-		return *new([32]byte), err
+		return *new(*big.Int), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
 
 }
 
-// Zeros is a free data retrieval call binding the contract method 0xe8295588.
+// TreeDepth is a free data retrieval call binding the contract method 0x16a56c41.
 //
-// Solidity: function zeros(uint256 ) view returns(bytes32)
-func (_ZkCertificateRegistry *ZkCertificateRegistrySession) Zeros(arg0 *big.Int) ([32]byte, error) {
-	return _ZkCertificateRegistry.Contract.Zeros(&_ZkCertificateRegistry.CallOpts, arg0)
+// Solidity: function treeDepth() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) TreeDepth() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.TreeDepth(&_ZkCertificateRegistry.CallOpts)
 }
 
-// Zeros is a free data retrieval call binding the contract method 0xe8295588.
+// TreeDepth is a free data retrieval call binding the contract method 0x16a56c41.
 //
-// Solidity: function zeros(uint256 ) view returns(bytes32)
-func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) Zeros(arg0 *big.Int) ([32]byte, error) {
-	return _ZkCertificateRegistry.Contract.Zeros(&_ZkCertificateRegistry.CallOpts, arg0)
+// Solidity: function treeDepth() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) TreeDepth() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.TreeDepth(&_ZkCertificateRegistry.CallOpts)
+}
+
+// TreeSize is a free data retrieval call binding the contract method 0x8d1ddfb1.
+//
+// Solidity: function treeSize() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) TreeSize(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "treeSize")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// TreeSize is a free data retrieval call binding the contract method 0x8d1ddfb1.
+//
+// Solidity: function treeSize() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) TreeSize() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.TreeSize(&_ZkCertificateRegistry.CallOpts)
+}
+
+// TreeSize is a free data retrieval call binding the contract method 0x8d1ddfb1.
+//
+// Solidity: function treeSize() view returns(uint256)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) TreeSize() (*big.Int, error) {
+	return _ZkCertificateRegistry.Contract.TreeSize(&_ZkCertificateRegistry.CallOpts)
+}
+
+// VerifyMerkleRoot is a free data retrieval call binding the contract method 0x0820dc2f.
+//
+// Solidity: function verifyMerkleRoot(bytes32 _merkleRoot) view returns(bool)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCaller) VerifyMerkleRoot(opts *bind.CallOpts, _merkleRoot [32]byte) (bool, error) {
+	var out []interface{}
+	err := _ZkCertificateRegistry.contract.Call(opts, &out, "verifyMerkleRoot", _merkleRoot)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// VerifyMerkleRoot is a free data retrieval call binding the contract method 0x0820dc2f.
+//
+// Solidity: function verifyMerkleRoot(bytes32 _merkleRoot) view returns(bool)
+func (_ZkCertificateRegistry *ZkCertificateRegistrySession) VerifyMerkleRoot(_merkleRoot [32]byte) (bool, error) {
+	return _ZkCertificateRegistry.Contract.VerifyMerkleRoot(&_ZkCertificateRegistry.CallOpts, _merkleRoot)
+}
+
+// VerifyMerkleRoot is a free data retrieval call binding the contract method 0x0820dc2f.
+//
+// Solidity: function verifyMerkleRoot(bytes32 _merkleRoot) view returns(bool)
+func (_ZkCertificateRegistry *ZkCertificateRegistryCallerSession) VerifyMerkleRoot(_merkleRoot [32]byte) (bool, error) {
+	return _ZkCertificateRegistry.Contract.VerifyMerkleRoot(&_ZkCertificateRegistry.CallOpts, _merkleRoot)
 }
 
 // AddZkCertificate is a paid mutator transaction binding the contract method 0x89a64453.
