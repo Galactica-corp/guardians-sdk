@@ -297,10 +297,6 @@ var (
 	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkCertificateRevocation(bytes32,address,uint256)"))
 )
 
-var blocksDistance = big.NewInt(10_000)
-
-var blockDistancePlusOne = new(big.Int).Add(blocksDistance, big.NewInt(1))
-
 func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	res := make([][32]byte, len(proof.Path))
 
