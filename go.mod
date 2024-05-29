@@ -3,8 +3,8 @@ module github.com/galactica-corp/guardians-sdk
 go 1.22.2
 
 require (
+	github.com/Galactica-corp/merkle-proof-service v0.2.3
 	github.com/ethereum/go-ethereum v1.13.15
-	github.com/galactica-corp/merkle-proof-service v0.2.1
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/holiman/uint256 v1.2.4
 	github.com/iden3/go-iden3-crypto v0.0.16

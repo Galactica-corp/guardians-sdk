@@ -31,11 +31,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
+	merkleproofservice "github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
-	merkleproofservice "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 )
 
 type issueZKCertFlags struct {
