@@ -138,33 +138,8 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
-	registerTx, err := registerToQueue(ctx, client, providerKey, registry, certificate.LeafHash)
-	if err != nil {
-		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
-	}
-
-	if receipt, err := bind.WaitMined(ctx, client, registerTx); err != nil {
-		return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
-	} else if receipt.Status == 0 {
-		return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
-	}
-
-	for {
-		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, certificate.LeafHash.Bytes32())
-		if err != nil {
-			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
-		}
-
-		if startTime.Cmp(big.NewInt(time.Now().Unix())) <= 0 {
-			break
-		}
-
-		sleepDuration := time.Duration(expirationTime.Uint64()-startTime.Uint64()) * time.Second
-		if sleepDuration < 0 {
-			return fmt.Errorf("invalid time parameters: expiration time is earlier than start time")
-		}
-
-		time.Sleep(sleepDuration)
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, certificate.LeafHash); err != nil {
+		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
 	}
 
 	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
@@ -361,4 +336,43 @@ func registerToQueue(
 	}
 
 	return recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
+}
+
+func registerAndWaitForZkCertificateTurn(
+	ctx context.Context,
+	client *ethclient.Client,
+	providerKey *ecdsa.PrivateKey,
+	registry RecordRegistry,
+	leafHash zkcertificate.Hash,
+) error {
+	registerTx, err := registerToQueue(ctx, client, providerKey, registry, leafHash)
+	if err != nil {
+		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
+	}
+
+	if receipt, err := bind.WaitMined(ctx, client, registerTx); err != nil {
+		return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
+	}
+
+	for {
+		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, leafHash.Bytes32())
+		if err != nil {
+			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
+		}
+
+		if startTime.Cmp(big.NewInt(time.Now().Unix())) <= 0 {
+			break
+		}
+
+		sleepDuration := time.Duration(expirationTime.Uint64()-startTime.Uint64()) * time.Second
+		if sleepDuration < 0 {
+			return fmt.Errorf("invalid time parameters: expiration time is earlier than start time")
+		}
+
+		time.Sleep(sleepDuration)
+	}
+
+	return nil
 }

@@ -128,6 +128,10 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("get merkle proof: %w", err)
 	}
 
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, leafHash); err != nil {
+		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
+	}
+
 	tx, err := constructRevokeZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to revoke record from registry: %w", err)
@@ -136,7 +140,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
 		return fmt.Errorf("wait until transaction is mined: %w", err)
 	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+		return fmt.Errorf("transaction %q failed", receipt.TxHash)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
