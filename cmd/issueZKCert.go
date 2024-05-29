@@ -303,11 +303,6 @@ func buildAndSaveOutput[T any](
 	return nil
 }
 
-var (
-	signatureRecordAddition   = crypto.Keccak256Hash([]byte("zkCertificateAddition(bytes32,address,uint256)"))
-	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkCertificateRevocation(bytes32,address,uint256)"))
-)
-
 func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	res := make([][32]byte, len(proof.Path))
 
