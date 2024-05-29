@@ -17,6 +17,7 @@ package merkle
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"math/big"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/ff"
 	"golang.org/x/crypto/sha3"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 type TreeNode struct {
@@ -114,7 +115,10 @@ func toSDKProof(proof *merkle.Proof) (Proof, error) {
 }
 
 func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string) (merkle.QueryClient, error) {
-	conn, err := grpc.DialContext(ctx, merkleProofServiceHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(
+		merkleProofServiceHost,
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("connect to Merkle Proof Service: %w", err)
 	}
