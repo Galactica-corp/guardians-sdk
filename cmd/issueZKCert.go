@@ -138,6 +138,35 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
+	registerTx, err := registerToQueue(ctx, client, providerKey, registry, certificate.LeafHash)
+	if err != nil {
+		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
+	}
+
+	if receipt, err := bind.WaitMined(ctx, client, registerTx); err != nil {
+		return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
+	}
+
+	for {
+		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, certificate.LeafHash.Bytes32())
+		if err != nil {
+			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
+		}
+
+		if startTime.Cmp(big.NewInt(time.Now().Unix())) <= 0 {
+			break
+		}
+
+		sleepDuration := time.Duration(expirationTime.Uint64()-startTime.Uint64()) * time.Second
+		if sleepDuration < 0 {
+			return fmt.Errorf("invalid time parameters: expiration time is earlier than start time")
+		}
+
+		time.Sleep(sleepDuration)
+	}
+
 	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
@@ -146,7 +175,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
 		return fmt.Errorf("wait until transaction is mined: %w", err)
 	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+		return fmt.Errorf("transaction %q failed", receipt.TxHash)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
@@ -188,10 +217,18 @@ type (
 			zkCertificateHash [32]byte,
 			merkleProof [][32]byte,
 		) (*types.Transaction, error)
+		RegisterToQueue(
+			opts *bind.TransactOpts,
+			zkCertificateHash [32]byte,
+		) (*types.Transaction, error)
 	}
 
 	RecordRegistryCaller interface {
 		GuardianRegistry(opts *bind.CallOpts) (common.Address, error)
+		GetTimeParameters(
+			opts *bind.CallOpts,
+			zkCertificateHash [32]byte,
+		) (*big.Int, *big.Int, error)
 	}
 
 	RecordRegistry interface {
@@ -291,7 +328,6 @@ func buildAndSaveOutput[T any](
 	return nil
 }
 
-// TODO: Deployed contract doesn't emit these events, it emits an older version of them
 var (
 	signatureRecordAddition   = crypto.Keccak256Hash([]byte("zkCertificateAddition(bytes32,address,uint256)"))
 	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkCertificateRevocation(bytes32,address,uint256)"))
@@ -305,4 +341,24 @@ func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	}
 
 	return res
+}
+
+func registerToQueue(
+	ctx context.Context,
+	client *ethclient.Client,
+	providerKey *ecdsa.PrivateKey,
+	recordRegistry RecordRegistryTransactor,
+	leafHash zkcertificate.Hash,
+) (*types.Transaction, error) {
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve chain id: %w", err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
+	}
+
+	return recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
 }
