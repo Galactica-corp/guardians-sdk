@@ -355,22 +355,25 @@ func registerAndWaitForZkCertificateTurn(
 		return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
 	}
 
-	startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, leafHash.Bytes32())
-	if err != nil {
-		return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
-	}
-	currentTime := big.NewInt(time.Now().Unix())
-	if startTime.Cmp(currentTime) > 0 {
-		sleepDuration := time.Duration(startTime.Uint64()-currentTime.Uint64()) * time.Second
+	for {
+		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, leafHash.Bytes32())
+		if err != nil {
+			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
+		}
+
+		currentTime := big.NewInt(time.Now().Unix())
+		if startTime.Cmp(currentTime) <= 0 {
+			break
+		}
+		if expirationTime.Cmp(currentTime) <= 0 {
+			return fmt.Errorf("queue wait time expired for zkCertificate hash %s", leafHash)
+		}
+
 		select {
-		case <-time.After(sleepDuration):
+		case <-time.After(5 * time.Second):
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-	}
-
-	if expirationTime.Cmp(startTime) <= 0 {
-		return fmt.Errorf("invalid time parameters: expiration time is earlier than start time")
 	}
 
 	return nil
