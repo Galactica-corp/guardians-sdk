@@ -45,6 +45,7 @@ type issueZKCertFlags struct {
 	rpcURL                 string
 	registryAddress        cli.Address
 	merkleProofServiceURL  string
+	merkleProofServiceTLS  bool
 }
 
 func NewCmdIssueZKCert() *cobra.Command {
@@ -78,6 +79,7 @@ $ galactica-guardian issueZKCert -c zkcert.json -k provider_private_key.hex -o o
 	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
+	cmd.Flags().BoolVar(&f.merkleProofServiceTLS, "merkle-proof-service-tls", false, "enable TLS for Merkle Proof Service gRPC connection")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
@@ -107,7 +109,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL)
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL, f.merkleProofServiceTLS)
 	if err != nil {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
