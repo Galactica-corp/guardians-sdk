@@ -107,7 +107,7 @@ func New[T Content](
 
 type providerDataDTO struct {
 	Ax  string `json:"ax"`
-	Bx  string `json:"bx"`
+	Ay  string `json:"ay"`
 	S   string `json:"s"`
 	R8x string `json:"r8x"`
 	R8y string `json:"r8y"`
@@ -117,7 +117,7 @@ type providerDataDTO struct {
 func (p ProviderData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(providerDataDTO{
 		Ax:  p.PublicKey.X.String(),
-		Bx:  p.PublicKey.Y.String(),
+		Ay:  p.PublicKey.Y.String(),
 		S:   p.Signature.S.String(),
 		R8x: p.Signature.R8.X.String(),
 		R8y: p.Signature.R8.Y.String(),
@@ -138,7 +138,7 @@ func (p *ProviderData) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid x coordinate of public key point")
 	}
 
-	p.PublicKey.Y, ok = new(big.Int).SetString(dto.Bx, 10)
+	p.PublicKey.Y, ok = new(big.Int).SetString(dto.Ay, 10)
 	if !ok {
 		return fmt.Errorf("invalid y coordinate of public key point")
 	}
