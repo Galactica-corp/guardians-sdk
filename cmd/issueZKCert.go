@@ -194,18 +194,13 @@ type (
 			zkCertificateHash [32]byte,
 			merkleProof [][32]byte,
 		) (*types.Transaction, error)
-		RegisterToQueue(
-			opts *bind.TransactOpts,
-			zkCertificateHash [32]byte,
-		) (*types.Transaction, error)
+		RegisterToQueue(opts *bind.TransactOpts, zkCertificateHash [32]byte) (*types.Transaction, error)
+		CheckZkCertificateHashInQueue(opts *bind.CallOpts, zkCertificateHash [32]byte) (bool, error)
 	}
 
 	RecordRegistryCaller interface {
 		GuardianRegistry(opts *bind.CallOpts) (common.Address, error)
-		GetTimeParameters(
-			opts *bind.CallOpts,
-			zkCertificateHash [32]byte,
-		) (*big.Int, *big.Int, error)
+		GetTimeParameters(opts *bind.CallOpts, zkCertificateHash [32]byte) (*big.Int, *big.Int, error)
 	}
 
 	RecordRegistry interface {
@@ -332,7 +327,19 @@ func registerToQueue(
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
 
-	return recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
+	tx, err := recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
+	if err != nil {
+		exists, checkErr := recordRegistry.CheckZkCertificateHashInQueue(&bind.CallOpts{}, leafHash.Bytes32())
+		if checkErr != nil {
+			return nil, fmt.Errorf("register to queue failed: %w, also failed to check if zkCertificateHash is in queue: %w", err, checkErr)
+		}
+		if exists {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("register to queue failed: %w", err)
+	}
+
+	return tx, nil
 }
 
 func registerAndWaitForZkCertificateTurn(
@@ -347,12 +354,14 @@ func registerAndWaitForZkCertificateTurn(
 		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
 	}
 
-	receipt, err := bind.WaitMined(ctx, client, registerTx)
-	if err != nil {
-		return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
-	}
-	if receipt.Status == 0 {
-		return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
+	if registerTx != nil {
+		receipt, err := bind.WaitMined(ctx, client, registerTx)
+		if err != nil {
+			return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
+		}
+		if receipt.Status == 0 {
+			return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
+		}
 	}
 
 	for {
