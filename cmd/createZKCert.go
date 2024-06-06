@@ -18,7 +18,6 @@ package cmd
 import (
 	"crypto/rand"
 	"fmt"
-	"math"
 	"math/big"
 	"os"
 	"time"
@@ -124,18 +123,14 @@ func createZKCert(f *createZKCertFlags) error {
 		return fmt.Errorf("sign certificate: %w", err)
 	}
 
-	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
+	// @TODO: Remove this once TypeScript code is updated to handle random salt correctly
+	// Limit random salt to 2^53 - 1 to avoid precision loss in JavaScript
+	salt, err := rand.Int(rand.Reader, big.NewInt(1<<53-1 /*math.MaxInt64*/)) // [0, MaxInt64)
 	if err != nil {
 		return fmt.Errorf("generate random salt: %w", err)
 	}
 
 	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
-
-	// @TODO: Remove this once TypeScript code is updated to handle random salt correctly
-	// Limit random salt to 2^53 - 1 to avoid precision loss in JavaScript
-	if randomSalt > 1<<53-1 {
-		randomSalt = randomSalt % (1<<53 - 1)
-	}
 
 	certificate, err := zkcertificate.New(
 		holderCommitment.CommitmentHash,
