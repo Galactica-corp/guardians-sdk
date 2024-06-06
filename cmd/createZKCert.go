@@ -131,6 +131,12 @@ func createZKCert(f *createZKCertFlags) error {
 
 	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
 
+	// @TODO: Remove this once TypeScript code is updated to handle random salt correctly
+	// Limit random salt to 2^53 - 1 to avoid precision loss in JavaScript
+	if randomSalt > 1<<53-1 {
+		randomSalt = randomSalt % (1<<53 - 1)
+	}
+
 	certificate, err := zkcertificate.New(
 		holderCommitment.CommitmentHash,
 		certificateContent,
