@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/utils"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
@@ -192,8 +193,9 @@ func SignCertificate(
 		return nil, fmt.Errorf("hash message: %w", err)
 	}
 
-	// TODO: Why mod here? It doesn't crash without mod
-	// message = message.Mod(message, utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040"))
+	// take modulo of the message to get it into the mod field supported by eddsa
+	eddsaPrimeFieldMod := utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040")
+	message = message.Mod(message, eddsaPrimeFieldMod)
 
 	return providerKey.SignPoseidon(message), nil
 }
