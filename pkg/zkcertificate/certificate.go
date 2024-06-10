@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -40,7 +41,7 @@ type Certificate[T any] struct {
 	ContentHash      Hash         `json:"contentHash"`
 	ExpirationDate   Timestamp    `json:"expirationDate"`
 	Provider         ProviderData `json:"providerData"`
-	RandomSalt       int64        `json:"randomSalt"`
+	RandomSalt       string       `json:"randomSalt"`
 }
 
 // ProviderData represents the public key and signature data of a certificate provider.
@@ -101,7 +102,7 @@ func New[T Content](
 			PublicKey: *providerPublicKey,
 			Signature: *providerSignature,
 		},
-		RandomSalt: salt,
+		RandomSalt: strconv.FormatInt(salt, 10),
 	}, nil
 }
 
