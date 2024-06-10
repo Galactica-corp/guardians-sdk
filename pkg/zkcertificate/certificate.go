@@ -30,6 +30,10 @@ import (
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
 
+const (
+	eddsaPrimeFieldMod = "2736030358979909402780800718157159386076813972158567259200215660948447373040"
+)
+
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
 // It is parameterized by the type T for the content field.
 // Certificate content must be directly determined by the certificate Standard.
@@ -194,8 +198,7 @@ func SignCertificate(
 	}
 
 	// take modulo of the message to get it into the mod field supported by eddsa
-	eddsaPrimeFieldMod := utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040")
-	message = message.Mod(message, eddsaPrimeFieldMod)
+	message = message.Mod(message, utils.NewIntFromString(eddsaPrimeFieldMod))
 
 	return providerKey.SignPoseidon(message), nil
 }
@@ -211,6 +214,9 @@ func VerifySignature(
 	if err != nil {
 		return false, fmt.Errorf("hash message: %w", err)
 	}
+
+	// take modulo of the message to get it into the mod field supported by eddsa
+	message = message.Mod(message, utils.NewIntFromString(eddsaPrimeFieldMod))
 
 	return providerKey.VerifyPoseidon(message, signature), nil
 }
