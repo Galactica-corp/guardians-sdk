@@ -30,8 +30,8 @@ import (
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
 
-const (
-	eddsaPrimeFieldMod = "2736030358979909402780800718157159386076813972158567259200215660948447373040"
+var (
+	eddsaPrimeFieldMod = utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040")
 )
 
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
@@ -186,19 +186,25 @@ type RegistrationDetails struct {
 	LeafIndex int            `json:"leafIndex"`
 }
 
+// prepareForEdDSA computes the Poseidon hash of the given inputs and reduces it to the field supported by EdDSA.
+func prepareForEdDSA(inputs ...*big.Int) (*big.Int, error) {
+	hash, err := poseidon.Hash(inputs)
+	if err != nil {
+		return nil, fmt.Errorf("compute poseidon hash: %w", err)
+	}
+	return hash.Mod(hash, eddsaPrimeFieldMod), nil
+}
+
 // SignCertificate generates a digital signature for a certificate using the provider's private key.
 func SignCertificate(
 	providerKey babyjub.PrivateKey,
 	contentHash Hash,
 	commitmentHash Hash,
 ) (*babyjub.Signature, error) {
-	message, err := poseidon.Hash([]*big.Int{contentHash.BigInt(), commitmentHash.BigInt()})
+	message, err := prepareForEdDSA(contentHash.BigInt(), commitmentHash.BigInt())
 	if err != nil {
 		return nil, fmt.Errorf("hash message: %w", err)
 	}
-
-	// take modulo of the message to get it into the mod field supported by eddsa
-	message = message.Mod(message, utils.NewIntFromString(eddsaPrimeFieldMod))
 
 	return providerKey.SignPoseidon(message), nil
 }
@@ -210,13 +216,10 @@ func VerifySignature(
 	commitmentHash Hash,
 	signature *babyjub.Signature,
 ) (bool, error) {
-	message, err := poseidon.Hash([]*big.Int{contentHash.BigInt(), commitmentHash.BigInt()})
+	message, err := prepareForEdDSA(contentHash.BigInt(), commitmentHash.BigInt())
 	if err != nil {
 		return false, fmt.Errorf("hash message: %w", err)
 	}
-
-	// take modulo of the message to get it into the mod field supported by eddsa
-	message = message.Mod(message, utils.NewIntFromString(eddsaPrimeFieldMod))
 
 	return providerKey.VerifyPoseidon(message, signature), nil
 }
@@ -242,7 +245,7 @@ func LeafHash(
 		big.NewInt(expirationDate.Unix()),
 	})
 	if err != nil {
-		return Hash{}, fmt.Errorf("compute hash: %w", err)
+		return Hash{}, fmt.Errorf("compute leaf hash: %w", err)
 	}
 
 	return HashFromBigInt(hash), nil
