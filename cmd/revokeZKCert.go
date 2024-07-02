@@ -39,6 +39,7 @@ type revokeZKCertFlags struct {
 	providerPrivateKeyPath string
 	rpcURL                 string
 	merkleProofServiceURL  string
+	merkleProofServiceTLS  bool
 }
 
 func NewCmdRevokeZKCert() *cobra.Command {
@@ -69,6 +70,7 @@ $ galactica-guardian revokeZKCert -c zkcert.json -k provider_private_key.hex`,
 	cmd.Flags().StringVarP(&f.providerPrivateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded Ethereum (ECDSA) private key to sign the transaction")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
+	cmd.Flags().BoolVar(&f.merkleProofServiceTLS, "merkle-proof-service-tls", false, "enable TLS for Merkle Proof Service gRPC connection")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
@@ -97,7 +99,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL)
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL, f.merkleProofServiceTLS)
 	if err != nil {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
@@ -128,6 +130,10 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("get merkle proof: %w", err)
 	}
 
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, leafHash); err != nil {
+		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
+	}
+
 	tx, err := constructRevokeZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to revoke record from registry: %w", err)
@@ -136,7 +142,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
 		return fmt.Errorf("wait until transaction is mined: %w", err)
 	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+		return fmt.Errorf("transaction %q failed", receipt.TxHash)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {

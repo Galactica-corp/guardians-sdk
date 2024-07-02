@@ -31,11 +31,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/spf13/cobra"
 
+	merkleproofservice "github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
-	merkleproofservice "github.com/galactica-corp/merkle-proof-service/gen/galactica/merkle"
 )
 
 type issueZKCertFlags struct {
@@ -45,6 +45,7 @@ type issueZKCertFlags struct {
 	rpcURL                 string
 	registryAddress        cli.Address
 	merkleProofServiceURL  string
+	merkleProofServiceTLS  bool
 }
 
 func NewCmdIssueZKCert() *cobra.Command {
@@ -78,6 +79,7 @@ $ galactica-guardian issueZKCert -c zkcert.json -k provider_private_key.hex -o o
 	cmd.Flags().VarP(&f.registryAddress, "registry-address", "r", "Ethereum address of the registry contract on-chain")
 	cmd.Flags().StringVarP(&f.rpcURL, "rpc-url", "", "", "url of Ethereum compatible RPC endpoint")
 	cmd.Flags().StringVarP(&f.merkleProofServiceURL, "merkle-proof-service-url", "m", "", "Merkle Proof Service gRPC endpoint url")
+	cmd.Flags().BoolVar(&f.merkleProofServiceTLS, "merkle-proof-service-tls", false, "enable TLS for Merkle Proof Service gRPC connection")
 
 	_ = cmd.MarkFlagRequired("certificate-file")
 	_ = cmd.MarkFlagRequired("provider-private-key")
@@ -107,7 +109,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL)
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL, f.merkleProofServiceTLS)
 	if err != nil {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
@@ -138,6 +140,10 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, certificate.LeafHash); err != nil {
+		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
+	}
+
 	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
@@ -146,7 +152,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
 		return fmt.Errorf("wait until transaction is mined: %w", err)
 	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q falied", receipt.TxHash)
+		return fmt.Errorf("transaction %q failed", receipt.TxHash)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
@@ -188,10 +194,13 @@ type (
 			zkCertificateHash [32]byte,
 			merkleProof [][32]byte,
 		) (*types.Transaction, error)
+		RegisterToQueue(opts *bind.TransactOpts, zkCertificateHash [32]byte) (*types.Transaction, error)
+		CheckZkCertificateHashInQueue(opts *bind.CallOpts, zkCertificateHash [32]byte) (bool, error)
 	}
 
 	RecordRegistryCaller interface {
 		GuardianRegistry(opts *bind.CallOpts) (common.Address, error)
+		GetTimeParameters(opts *bind.CallOpts, zkCertificateHash [32]byte) (*big.Int, *big.Int, error)
 	}
 
 	RecordRegistry interface {
@@ -291,16 +300,6 @@ func buildAndSaveOutput[T any](
 	return nil
 }
 
-// TODO: Deployed contract doesn't emit these events, it emits an older version of them
-var (
-	signatureRecordAddition   = crypto.Keccak256Hash([]byte("zkCertificateAddition(bytes32,address,uint256)"))
-	signatureRecordRevocation = crypto.Keccak256Hash([]byte("zkCertificateRevocation(bytes32,address,uint256)"))
-)
-
-var blocksDistance = big.NewInt(10_000)
-
-var blockDistancePlusOne = new(big.Int).Add(blocksDistance, big.NewInt(1))
-
 func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	res := make([][32]byte, len(proof.Path))
 
@@ -309,4 +308,82 @@ func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	}
 
 	return res
+}
+
+func registerToQueue(
+	ctx context.Context,
+	client *ethclient.Client,
+	providerKey *ecdsa.PrivateKey,
+	recordRegistry RecordRegistryTransactor,
+	leafHash zkcertificate.Hash,
+) (*types.Transaction, error) {
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve chain id: %w", err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
+	}
+
+	tx, err := recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
+	if err != nil {
+		exists, checkErr := recordRegistry.CheckZkCertificateHashInQueue(&bind.CallOpts{}, leafHash.Bytes32())
+		if checkErr != nil {
+			return nil, fmt.Errorf("register to queue failed: %w, also failed to check if zkCertificateHash is in queue: %w", err, checkErr)
+		}
+		if exists {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("register to queue failed: %w", err)
+	}
+
+	return tx, nil
+}
+
+func registerAndWaitForZkCertificateTurn(
+	ctx context.Context,
+	client *ethclient.Client,
+	providerKey *ecdsa.PrivateKey,
+	registry RecordRegistry,
+	leafHash zkcertificate.Hash,
+) error {
+	registerTx, err := registerToQueue(ctx, client, providerKey, registry, leafHash)
+	if err != nil {
+		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
+	}
+
+	if registerTx != nil {
+		receipt, err := bind.WaitMined(ctx, client, registerTx)
+		if err != nil {
+			return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
+		}
+		if receipt.Status == 0 {
+			return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
+		}
+	}
+
+	for {
+		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, leafHash.Bytes32())
+		if err != nil {
+			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
+		}
+
+		currentTime := big.NewInt(time.Now().Unix())
+		if startTime.Cmp(currentTime) <= 0 {
+			break
+		}
+		if expirationTime.Cmp(currentTime) <= 0 {
+			return fmt.Errorf("queue wait time expired for zkCertificate hash %s", leafHash)
+		}
+
+		select {
+		case <-time.After(5 * time.Second):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	return nil
 }

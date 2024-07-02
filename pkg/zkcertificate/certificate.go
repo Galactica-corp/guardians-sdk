@@ -19,13 +19,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/utils"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
+)
+
+var (
+	eddsaPrimeFieldMod = utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040")
 )
 
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
@@ -40,7 +46,7 @@ type Certificate[T any] struct {
 	ContentHash      Hash         `json:"contentHash"`
 	ExpirationDate   Timestamp    `json:"expirationDate"`
 	Provider         ProviderData `json:"providerData"`
-	RandomSalt       int64        `json:"randomSalt"`
+	RandomSalt       string       `json:"randomSalt"`
 }
 
 // ProviderData represents the public key and signature data of a certificate provider.
@@ -101,13 +107,13 @@ func New[T Content](
 			PublicKey: *providerPublicKey,
 			Signature: *providerSignature,
 		},
-		RandomSalt: salt,
+		RandomSalt: strconv.FormatInt(salt, 10),
 	}, nil
 }
 
 type providerDataDTO struct {
 	Ax  string `json:"ax"`
-	Bx  string `json:"bx"`
+	Ay  string `json:"ay"`
 	S   string `json:"s"`
 	R8x string `json:"r8x"`
 	R8y string `json:"r8y"`
@@ -117,7 +123,7 @@ type providerDataDTO struct {
 func (p ProviderData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(providerDataDTO{
 		Ax:  p.PublicKey.X.String(),
-		Bx:  p.PublicKey.Y.String(),
+		Ay:  p.PublicKey.Y.String(),
 		S:   p.Signature.S.String(),
 		R8x: p.Signature.R8.X.String(),
 		R8y: p.Signature.R8.Y.String(),
@@ -138,7 +144,7 @@ func (p *ProviderData) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid x coordinate of public key point")
 	}
 
-	p.PublicKey.Y, ok = new(big.Int).SetString(dto.Bx, 10)
+	p.PublicKey.Y, ok = new(big.Int).SetString(dto.Ay, 10)
 	if !ok {
 		return fmt.Errorf("invalid y coordinate of public key point")
 	}
@@ -180,19 +186,25 @@ type RegistrationDetails struct {
 	LeafIndex int            `json:"leafIndex"`
 }
 
+// prepareForEdDSA computes the Poseidon hash of the given inputs and reduces it to the field supported by EdDSA.
+func prepareForEdDSA(inputs ...*big.Int) (*big.Int, error) {
+	hash, err := poseidon.Hash(inputs)
+	if err != nil {
+		return nil, fmt.Errorf("compute poseidon hash: %w", err)
+	}
+	return hash.Mod(hash, eddsaPrimeFieldMod), nil
+}
+
 // SignCertificate generates a digital signature for a certificate using the provider's private key.
 func SignCertificate(
 	providerKey babyjub.PrivateKey,
 	contentHash Hash,
 	commitmentHash Hash,
 ) (*babyjub.Signature, error) {
-	message, err := poseidon.Hash([]*big.Int{contentHash.BigInt(), commitmentHash.BigInt()})
+	message, err := prepareForEdDSA(contentHash.BigInt(), commitmentHash.BigInt())
 	if err != nil {
 		return nil, fmt.Errorf("hash message: %w", err)
 	}
-
-	// TODO: Why mod here? It doesn't crash without mod
-	// message = message.Mod(message, utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040"))
 
 	return providerKey.SignPoseidon(message), nil
 }
@@ -204,7 +216,7 @@ func VerifySignature(
 	commitmentHash Hash,
 	signature *babyjub.Signature,
 ) (bool, error) {
-	message, err := poseidon.Hash([]*big.Int{contentHash.BigInt(), commitmentHash.BigInt()})
+	message, err := prepareForEdDSA(contentHash.BigInt(), commitmentHash.BigInt())
 	if err != nil {
 		return false, fmt.Errorf("hash message: %w", err)
 	}
@@ -233,7 +245,7 @@ func LeafHash(
 		big.NewInt(expirationDate.Unix()),
 	})
 	if err != nil {
-		return Hash{}, fmt.Errorf("compute hash: %w", err)
+		return Hash{}, fmt.Errorf("compute leaf hash: %w", err)
 	}
 
 	return HashFromBigInt(hash), nil

@@ -28,8 +28,8 @@ import (
 const defaultPaddingLength = 2 << 10
 
 type dataWithPadding struct {
-	Data    any
-	Padding string
+	Data    any    `json:"data"`
+	Padding string `json:"padding"`
 }
 
 // EncryptedMessage represents an encrypted message with additional meta-information.
