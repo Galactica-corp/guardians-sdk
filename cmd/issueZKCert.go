@@ -148,7 +148,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
 	}
 
-	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
+	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registryAddress, leafIndex, cert, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
 	}
@@ -257,9 +257,9 @@ func constructIssueZKCertTx(
 	ctx context.Context,
 	client *ethclient.Client,
 	providerKey *ecdsa.PrivateKey,
-	recordRegistry RecordRegistryTransactor,
-	emptyLeafIndex int,
-	leafHash zkcertificate.Hash,
+	registryAddress common.Address,
+	leafIndex int,
+	cert zkcertificate.Certificate[json.RawMessage],
 	proof merkle.Proof,
 ) (*types.Transaction, error) {
 	chainID, err := client.ChainID(ctx)
@@ -272,12 +272,47 @@ func constructIssueZKCertTx(
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
 
-	return recordRegistry.AddZkCertificate(
-		auth,
-		big.NewInt(int64(emptyLeafIndex)),
-		leafHash.Bytes32(),
-		encodeMerkleProof(proof),
-	)
+	if cert.Standard == zkcertificate.StandardKYC {
+		// For zkCertificate of type zkKYC, the smart contract interface expects a few more parameters
+		recordRegistry, err := contracts.NewZkKYCRegistry(registryAddress, client)
+		if err != nil {
+			return nil, fmt.Errorf("load record registry: %w", err)
+		}
+
+		// get KYC data from content to get the ID hash
+		var kycContent zkcertificate.KYCContent
+		err = json.Unmarshal(cert.Content, &kycContent)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal kyc content: %w", err)
+		}
+
+		idHash, err := kycContent.IDHash()
+		if err != nil {
+			return nil, fmt.Errorf("get id hash: %w", err)
+		}
+
+		return recordRegistry.AddZkKYC(
+			auth,
+			big.NewInt(int64(leafIndex)),
+			cert.LeafHash.Bytes32(),
+			encodeMerkleProof(proof),
+			idHash.BigInt(),
+			cert.HolderCommitment.BigInt(),
+			big.NewInt(cert.ExpirationDate.Unix()),
+		)
+	} else {
+		recordRegistry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
+		if err != nil {
+			return nil, fmt.Errorf("load record registry: %w", err)
+		}
+
+		return recordRegistry.AddZkCertificate(
+			auth,
+			big.NewInt(int64(leafIndex)),
+			cert.LeafHash.Bytes32(),
+			encodeMerkleProof(proof),
+		)
+	}
 }
 
 func buildAndSaveOutput[T any](

@@ -99,7 +99,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL, f.merkleProofServiceTLS)
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(f.merkleProofServiceURL, f.merkleProofServiceTLS)
 	if err != nil {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
