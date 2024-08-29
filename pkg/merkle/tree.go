@@ -7,7 +7,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -19,12 +19,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"math/big"
 
 	"github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
-	"github.com/iden3/go-iden3-crypto/ff"
-	"golang.org/x/crypto/sha3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,17 +46,6 @@ type Proof struct {
 	Leaf      TreeNode   `json:"leaf"`      // The Merkle tree node, which authenticity is proved by the Path.
 	LeafIndex int        `json:"leafIndex"` // Index of the Leaf in the Merkle tree.
 	Path      []TreeNode `json:"path"`
-}
-
-var EmptyLeafValue = new(uint256.Int).Mod(
-	uint256.MustFromBig(new(big.Int).SetBytes(makeSeedForEmptyLeaf())),
-	uint256.MustFromBig(ff.Modulus()),
-)
-
-func makeSeedForEmptyLeaf() []byte {
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write([]byte("Galactica"))
-	return hash.Sum(nil)
 }
 
 func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress string, leaf string) (Proof, error) {
@@ -115,7 +101,7 @@ func toSDKProof(proof *merkle.Proof) (Proof, error) {
 	}, nil
 }
 
-func ConnectToMerkleProofService(ctx context.Context, merkleProofServiceHost string, useTLS bool) (merkle.QueryClient, error) {
+func ConnectToMerkleProofService(merkleProofServiceHost string, useTLS bool) (merkle.QueryClient, error) {
 	var creds credentials.TransportCredentials
 	if useTLS {
 		creds = credentials.NewTLS(&tls.Config{})

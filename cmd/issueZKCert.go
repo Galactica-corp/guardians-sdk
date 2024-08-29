@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/holiman/uint256"
 	"github.com/spf13/cobra"
 
 	merkleproofservice "github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
@@ -136,7 +137,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	leafIndex, emptyLeafProof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	leafIndex, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
 	if err != nil {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
@@ -147,7 +148,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
 	}
 
-	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, emptyLeafProof)
+	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
 	}
@@ -160,11 +161,6 @@ func issueZKCert(f *issueZKCertFlags) error {
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
-	}
-
-	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.String(), leafHash.String())
-	if err != nil {
-		return fmt.Errorf("get proof: %v", err)
 	}
 
 	if err := buildAndSaveOutput(f.outputFilePath, cert, registryAddress, chainID, leafIndex, proof); err != nil {
@@ -292,6 +288,8 @@ func buildAndSaveOutput[T any](
 	leafIndex int,
 	proof merkle.Proof,
 ) error {
+	proof.Leaf = merkle.TreeNode{Value: uint256.MustFromBig(certificate.LeafHash.BigInt())}
+
 	if err := encodeToJSONFile(outputFilePath, zkcertificate.IssuedCertificate[T]{
 		Certificate: certificate,
 		Registration: zkcertificate.RegistrationDetails{
