@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/cobra"
 
 	merkleproofservice "github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
+
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
@@ -99,8 +100,8 @@ func issueZKCertCmd(f *issueZKCertFlags) func(cmd *cobra.Command, args []string)
 func issueZKCert(f *issueZKCertFlags) error {
 	ctx := context.Background()
 
-	var certificate zkcertificate.Certificate[json.RawMessage]
-	if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
+	var cert zkcertificate.Certificate[json.RawMessage]
+	if err := decodeJSONFile(f.certificateFilePath, &cert); err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}
 
@@ -109,7 +110,7 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to blockchain rpc: %w", err)
 	}
 
-	merkleProofClient, err := merkle.ConnectToMerkleProofService(ctx, f.merkleProofServiceURL, f.merkleProofServiceTLS)
+	merkleProofClient, err := merkle.ConnectToMerkleProofService(f.merkleProofServiceURL, f.merkleProofServiceTLS)
 	if err != nil {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
@@ -135,16 +136,18 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	emptyLeafIndex, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	leafIndex, emptyLeafProof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
 	if err != nil {
 		return fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
-	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, certificate.LeafHash); err != nil {
+	leafHash := cert.LeafHash
+
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, leafHash); err != nil {
 		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
 	}
 
-	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, emptyLeafIndex, certificate.LeafHash, proof)
+	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, emptyLeafProof)
 	if err != nil {
 		return fmt.Errorf("construct transaction to add record to registry: %w", err)
 	}
@@ -159,7 +162,12 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
 
-	if err := buildAndSaveOutput(f.outputFilePath, certificate, registryAddress, chainID, emptyLeafIndex, proof); err != nil {
+	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.String(), leafHash.String())
+	if err != nil {
+		return fmt.Errorf("get proof: %v", err)
+	}
+
+	if err := buildAndSaveOutput(f.outputFilePath, cert, registryAddress, chainID, leafIndex, proof); err != nil {
 		return fmt.Errorf("collect output: %w", err)
 	}
 
