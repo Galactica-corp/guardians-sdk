@@ -136,3 +136,25 @@ func mustHashFromString(s string) zkcertificate.Hash {
 
 	return zkcertificate.HashFromBigInt(v)
 }
+
+func TestKYCContent_IDHash(t *testing.T) {
+	kycContent := zkcertificate.KYCContent{
+		Surname:           mustHashFromString("9394571395257706853209381240690921572244805705054092251193796665368637684518"),
+		Forename:          mustHashFromString("12508415106905269703668517379769578980197323180488076414504369770793910945017"),
+		MiddleName:        mustHashFromString("1"),
+		YearOfBirth:       1989,
+		MonthOfBirth:      5,
+		DayOfBirth:        28,
+		VerificationLevel: zkcertificate.KYCVerificationLevelPassedKYC,
+		StreetAndNumber:   mustHashFromString("2716050888916668653838085209344746272579684295509938667842974355541145165593"),
+		Postcode:          mustHashFromString("15490214341472802343037230413947290042671105911775897810655006802854190405490"),
+		Town:              mustHashFromString("20114455475426887223405337417481199280779025506960488506094430597747419448504"),
+		Region:            mustHashFromString("1"),
+		Country:           mustHashFromString("5206272097955461433415670799568463787856046740863443717385317734933329763238"),
+		Citizenship:       mustHashFromString("3704096963533554561380603784545722638824989796177284091907872955048029270902"),
+	}
+
+	idHash, err := kycContent.IDHash()
+	require.NoError(t, err)
+	require.Equal(t, mustHashFromString("2631591587246391270888637927706583337682035735548049498259193277656977470874"), idHash)
+}

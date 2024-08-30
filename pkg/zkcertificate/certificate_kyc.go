@@ -203,3 +203,21 @@ func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
 func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
 	return []byte(strconv.Itoa(int(v))), nil
 }
+
+// IDHash computes and returns a user's ID hash for registration of the HumanID salt hash.
+func (c *KYCContent) IDHash() (Hash, error) {
+	hash, err := poseidon.Hash([]*big.Int{
+		c.Surname.BigInt(),
+		c.Forename.BigInt(),
+		c.MiddleName.BigInt(),
+		big.NewInt(int64(c.YearOfBirth)),
+		big.NewInt(int64(c.MonthOfBirth)),
+		big.NewInt(int64(c.DayOfBirth)),
+		c.Citizenship.BigInt(),
+	})
+	if err != nil {
+		return Hash{}, fmt.Errorf("compute id hash: %w", err)
+	}
+
+	return HashFromBigInt(hash), nil
+}
