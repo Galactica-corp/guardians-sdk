@@ -170,6 +170,13 @@ func decodeCertificateContent(
 		}
 
 		return content, nil
+	case zkcertificate.StandardTwitter:
+		var content zkcertificate.TwitterContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode twitter certificate content json: %w", err)
+		}
+
+		return content, nil
 	case zkcertificate.StandardREY:
 		var content zkcertificate.REYContent
 		if err := json.Unmarshal(certificateContent, &content); err != nil {
