@@ -26,11 +26,13 @@ type Standard string
 const (
 	StandardKYC        Standard = "gip1"
 	StandardSimpleJSON Standard = "gip2"
+	StandardREY        Standard = "gip4"
 )
 
 var allStandards = []string{
 	StandardKYC.String(),
 	StandardSimpleJSON.String(),
+	StandardREY.String(),
 }
 
 // IsStandard returns true if given value is a valid Standard.
