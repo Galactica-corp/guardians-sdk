@@ -28,6 +28,7 @@ const (
 	StandardSimpleJSON Standard = "gip2"
 	StandardTwitter    Standard = "gip3"
 	StandardREY        Standard = "gip4"
+	StandardUniswap    Standard = "gip5"
 )
 
 var allStandards = []string{
@@ -35,6 +36,7 @@ var allStandards = []string{
 	StandardSimpleJSON.String(),
 	StandardTwitter.String(),
 	StandardREY.String(),
+	StandardUniswap.String(),
 }
 
 // IsStandard returns true if given value is a valid Standard.

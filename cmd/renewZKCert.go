@@ -184,6 +184,13 @@ func decodeCertificateContent(
 		}
 
 		return content, nil
+	case zkcertificate.StandardUniswap:
+		var content zkcertificate.UniswapContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode uniswap certificate content json: %w", err)
+		}
+
+		return content, nil
 	default:
 		return nil, fmt.Errorf("unsupported certificate standard %s", certificateStandard)
 	}
