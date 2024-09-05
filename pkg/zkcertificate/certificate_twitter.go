@@ -29,7 +29,7 @@ import (
 
 // TwitterInputs represents the input data for X/Twitter verification.
 type TwitterInputs struct {
-	CreatedAt      time.Time `json:"createdAt" validate:"required,datetime=2006-01-02T15:04:05Z07:00,lt"`
+	CreatedAt      time.Time `json:"createdAt" validate:"required,lt"`
 	ID             string    `json:"id" validate:"required,number"`
 	FollowersCount uint      `json:"followersCount"`
 	FollowingCount uint      `json:"followingCount"`
