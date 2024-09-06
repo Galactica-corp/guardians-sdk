@@ -26,12 +26,14 @@ type Standard string
 const (
 	StandardKYC        Standard = "gip1"
 	StandardSimpleJSON Standard = "gip2"
+	StandardTwitter    Standard = "gip3"
 	StandardREY        Standard = "gip4"
 )
 
 var allStandards = []string{
 	StandardKYC.String(),
 	StandardSimpleJSON.String(),
+	StandardTwitter.String(),
 	StandardREY.String(),
 }
 

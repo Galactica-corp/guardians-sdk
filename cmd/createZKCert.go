@@ -178,6 +178,18 @@ func readCertificateContent(filePath string, standard zkcertificate.Standard) (z
 		}
 
 		return certificateContent, nil
+	case zkcertificate.StandardTwitter:
+		var inputs zkcertificate.TwitterInputs
+		if err := decodeJSONFile(filePath, &inputs); err != nil {
+			return nil, fmt.Errorf("read twitter inputs: %w", err)
+		}
+
+		certificateContent, err := inputs.FFEncode()
+		if err != nil {
+			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
+		}
+
+		return certificateContent, nil
 	case zkcertificate.StandardREY:
 		var inputs zkcertificate.REYInputs
 		if err := decodeJSONFile(filePath, &inputs); err != nil {
