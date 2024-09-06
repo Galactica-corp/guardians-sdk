@@ -37,7 +37,7 @@ type UniswapInputs struct {
 
 // FFEncode implements FFEncoder.
 func (u *UniswapInputs) FFEncode() (UniswapContent, error) {
-	addressBytes, err := hex.DecodeString(u.Address)
+	addressBytes, err := hex.DecodeString(u.Address[2:])
 	if err != nil {
 		return UniswapContent{}, fmt.Errorf("invalid address: %v", err)
 	}
