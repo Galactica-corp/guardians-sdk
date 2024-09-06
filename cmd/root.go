@@ -55,6 +55,7 @@ to the respective sections in the documentation.
 		NewCmdEncryptZKCert(),
 		NewCmdRevokeZKCert(),
 		NewCmdRenewZKCert(),
+		NewCmdPrintEdDSAPublicKey(),
 	)
 
 	return cmd
