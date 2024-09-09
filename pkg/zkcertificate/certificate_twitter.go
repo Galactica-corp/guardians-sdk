@@ -52,7 +52,7 @@ func (t TwitterInputs) FFEncode() (TwitterContent, error) {
 	}
 
 	return TwitterContent{
-		CreatedAt:      t.CreatedAt,
+		CreatedAt:      t.CreatedAt.Unix(),
 		ID:             HashFromBigInt(idHash),
 		FollowersCount: t.FollowersCount,
 		FollowingCount: t.FollowingCount,
@@ -86,14 +86,14 @@ func (t *TwitterInputs) UnmarshalJSON(data []byte) error {
 
 // TwitterContent represents the hashed content of TwitterInputs data.
 type TwitterContent struct {
-	CreatedAt      time.Time `json:"createdAt"`
-	ID             Hash      `json:"id"`
-	FollowersCount uint      `json:"followersCount"`
-	FollowingCount uint      `json:"followingCount"`
-	ListedCount    uint      `json:"listedCount"`
-	TweetCount     uint      `json:"tweetCount"`
-	Username       Hash      `json:"username"`
-	Verified       bool      `json:"verified"`
+	CreatedAt      int64 `json:"createdAt"`
+	ID             Hash  `json:"id"`
+	FollowersCount uint  `json:"followersCount"`
+	FollowingCount uint  `json:"followingCount"`
+	ListedCount    uint  `json:"listedCount"`
+	TweetCount     uint  `json:"tweetCount"`
+	Username       Hash  `json:"username"`
+	Verified       bool  `json:"verified"`
 }
 
 // Hash implements Content.
@@ -106,7 +106,7 @@ func (t TwitterContent) Hash() (Hash, error) {
 	}
 
 	hash, err := poseidon.Hash([]*big.Int{
-		big.NewInt(t.CreatedAt.Unix()),
+		big.NewInt(t.CreatedAt),
 		t.ID.BigInt(),
 		new(big.Int).SetUint64(uint64(t.FollowersCount)),
 		new(big.Int).SetUint64(uint64(t.FollowingCount)),
