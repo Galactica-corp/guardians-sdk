@@ -48,7 +48,9 @@ $ galactica-guardian printEdDSAPublicKey -f eddsa-private-key.hex`,
 		RunE: printEdDSAPublicKey(&f),
 	}
 
-	cmd.Flags().StringVarP(&f.privateKeyPath, "file", "f", "", "file path of eddsa private key")
+	cmd.Flags().StringVarP(&f.privateKeyPath, "provider-private-key", "k", "", "path to a file containing provider's hex-encoded EdDSA private key")
+
+	_ = cmd.MarkFlagRequired("provider-private-key")
 
 	return cmd
 }
