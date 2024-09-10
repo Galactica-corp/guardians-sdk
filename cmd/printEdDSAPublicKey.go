@@ -16,7 +16,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -68,11 +67,9 @@ func printEdDSAPublicKey(f *printEdDSAPublicKeyFlags) func(cmd *cobra.Command, a
 func PrintEdDSAPublicKey(privateKey babyjub.PrivateKey, w io.Writer) error {
 	publicKey := privateKey.Public()
 
-	return json.NewEncoder(w).Encode(struct {
-		X string `json:"x"`
-		Y string `json:"y"`
-	}{
-		X: publicKey.X.String(),
-		Y: publicKey.Y.String(),
-	})
+	if _, err := fmt.Fprintln(w, publicKey); err != nil {
+		return fmt.Errorf("print public key: %w", err)
+	}
+
+	return nil
 }
