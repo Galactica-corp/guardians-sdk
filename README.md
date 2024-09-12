@@ -31,6 +31,7 @@ and revoking Zero Knowledge Certificates. Ensure that this service is running an
 * `revokeZKCert`: Revoke a ZKCert from the Galactica blockchain registry.
 * `renewZKCert`: Renew a ZKCert with an updated expiration date.
 * `encryptZKCert`: Encrypt a ZKCert with a holder's encryption key.
+* `printEdDSAPublicKey`: Print EdDSA public key for a given private key.
 
 ## License
 
