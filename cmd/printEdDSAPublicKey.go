@@ -34,7 +34,7 @@ func NewCmdPrintEdDSAPublicKey() *cobra.Command {
 	var f printEdDSAPublicKeyFlags
 
 	cmd := &cobra.Command{
-		Use:   "printEdDSAPublicKey -f eddsa-private-key.hex",
+		Use:   "printEdDSAPublicKey -k eddsa-private-key.hex",
 		Short: "Print EdDSA public key for a given private key",
 		Long: `The printEdDSAPublicKey command allows you to retrieve and print the EdDSA public key
 corresponding to a given EdDSA private key. The command extracts the public key from a specified
@@ -44,7 +44,7 @@ To use this command, you must provide a file path to an EdDSA private key, from 
 will be derived and displayed.
 
 Example Usage:
-$ galactica-guardian printEdDSAPublicKey -f eddsa-private-key.hex`,
+$ galactica-guardian printEdDSAPublicKey -k eddsa-private-key.hex`,
 		RunE: printEdDSAPublicKey(&f),
 	}
 
