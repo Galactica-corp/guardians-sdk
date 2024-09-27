@@ -133,7 +133,9 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("load provider's ethereum private key: %w", err)
 	}
 
-	if err := ensureProviderIsGuardian(client, registry, crypto.PubkeyToAddress(providerKey.PublicKey)); err != nil {
+	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
+
+	if err := ensureProviderIsGuardian(ctx, client, registry, providerAddress); err != nil {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
@@ -179,47 +181,17 @@ func connectToBlockchainRPC(ctx context.Context, rawURL string) (*ethclient.Clie
 	return ethclient.DialContext(ctx, rawURL)
 }
 
-type (
-	RegistryEventParser interface {
-		ParseZkCertificateAddition(log types.Log) (*contracts.ZkCertificateRegistryZkCertificateAddition, error)
-		ParseZkCertificateRevocation(log types.Log) (*contracts.ZkCertificateRegistryZkCertificateRevocation, error)
-	}
-
-	RecordRegistryTransactor interface {
-		AddZkCertificate(
-			opts *bind.TransactOpts,
-			leafIndex *big.Int,
-			zkCertificateHash [32]byte,
-			merkleProof [][32]byte,
-		) (*types.Transaction, error)
-		RevokeZkCertificate(
-			opts *bind.TransactOpts,
-			leafIndex *big.Int,
-			zkCertificateHash [32]byte,
-			merkleProof [][32]byte,
-		) (*types.Transaction, error)
-		RegisterToQueue(opts *bind.TransactOpts, zkCertificateHash [32]byte) (*types.Transaction, error)
-		CheckZkCertificateHashInQueue(opts *bind.CallOpts, zkCertificateHash [32]byte) (bool, error)
-	}
-
-	RecordRegistryCaller interface {
-		GuardianRegistry(opts *bind.CallOpts) (common.Address, error)
-		GetTimeParameters(opts *bind.CallOpts, zkCertificateHash [32]byte) (*big.Int, *big.Int, error)
-	}
-
-	RecordRegistry interface {
-		RegistryEventParser
-		RecordRegistryTransactor
-		RecordRegistryCaller
-	}
-)
+type RecordRegistryAddressCaller interface {
+	GuardianRegistry(opts *bind.CallOpts) (common.Address, error)
+}
 
 func ensureProviderIsGuardian(
+	ctx context.Context,
 	client bind.ContractBackend,
-	registry RecordRegistryCaller,
+	registry RecordRegistryAddressCaller,
 	providerAddress common.Address,
 ) error {
-	guardianRegistryAddress, err := registry.GuardianRegistry(&bind.CallOpts{})
+	guardianRegistryAddress, err := registry.GuardianRegistry(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return fmt.Errorf("retrieve guardian registry address: %w", err)
 	}
@@ -229,10 +201,11 @@ func ensureProviderIsGuardian(
 		return fmt.Errorf("bind guardian registry contract: %w", err)
 	}
 
-	guardian, err := guardianRegistry.Guardians(&bind.CallOpts{}, providerAddress)
+	guardian, err := guardianRegistry.Guardians(&bind.CallOpts{Context: ctx}, providerAddress)
 	if err != nil {
 		return fmt.Errorf("retrieve guardian whitelist status: %w", err)
 	}
+
 	if !guardian.Whitelisted {
 		return fmt.Errorf("provider %s is not a guardian yet", providerAddress)
 	}
@@ -271,6 +244,8 @@ func constructIssueZKCertTx(
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
+
+	auth.Context = ctx
 
 	if cert.Standard == zkcertificate.StandardKYC {
 		// For zkCertificate of type zkKYC, the smart contract interface expects a few more parameters
@@ -351,11 +326,16 @@ func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	return res
 }
 
+type RecordRegistryQueue interface {
+	CheckZkCertificateHashInQueue(opts *bind.CallOpts, zkCertificateHash [32]byte) (bool, error)
+	RegisterToQueue(opts *bind.TransactOpts, zkCertificateHash [32]byte) (*types.Transaction, error)
+}
+
 func registerToQueue(
 	ctx context.Context,
 	client *ethclient.Client,
 	providerKey *ecdsa.PrivateKey,
-	recordRegistry RecordRegistryTransactor,
+	registry RecordRegistryQueue,
 	leafHash zkcertificate.Hash,
 ) (*types.Transaction, error) {
 	chainID, err := client.ChainID(ctx)
@@ -368,9 +348,11 @@ func registerToQueue(
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
 
-	tx, err := recordRegistry.RegisterToQueue(auth, leafHash.Bytes32())
+	auth.Context = ctx
+
+	tx, err := registry.RegisterToQueue(auth, leafHash.Bytes32())
 	if err != nil {
-		exists, checkErr := recordRegistry.CheckZkCertificateHashInQueue(&bind.CallOpts{}, leafHash.Bytes32())
+		exists, checkErr := registry.CheckZkCertificateHashInQueue(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
 		if checkErr != nil {
 			return nil, fmt.Errorf("register to queue failed: %w, also failed to check if zkCertificateHash is in queue: %w", err, checkErr)
 		}
@@ -387,7 +369,7 @@ func registerAndWaitForZkCertificateTurn(
 	ctx context.Context,
 	client *ethclient.Client,
 	providerKey *ecdsa.PrivateKey,
-	registry RecordRegistry,
+	registry RecordRegistryQueue,
 	leafHash zkcertificate.Hash,
 ) error {
 	registerTx, err := registerToQueue(ctx, client, providerKey, registry, leafHash)
@@ -406,17 +388,13 @@ func registerAndWaitForZkCertificateTurn(
 	}
 
 	for {
-		startTime, expirationTime, err := registry.GetTimeParameters(&bind.CallOpts{}, leafHash.Bytes32())
+		myTurn, err := registry.CheckZkCertificateHashInQueue(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
 		if err != nil {
-			return fmt.Errorf("retrieve time parameters for zkCertificate hash: %w", err)
+			return fmt.Errorf("retrieve zkCertificate hash to check: %w", err)
 		}
 
-		currentTime := big.NewInt(time.Now().Unix())
-		if startTime.Cmp(currentTime) <= 0 {
+		if myTurn {
 			break
-		}
-		if expirationTime.Cmp(currentTime) <= 0 {
-			return fmt.Errorf("queue wait time expired for zkCertificate hash %s", leafHash)
 		}
 
 		select {

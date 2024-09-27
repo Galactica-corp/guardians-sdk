@@ -118,7 +118,7 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 
 	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
 
-	if err := ensureProviderIsGuardian(client, registry, providerAddress); err != nil {
+	if err := ensureProviderIsGuardian(ctx, client, registry, providerAddress); err != nil {
 		return fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
@@ -152,11 +152,20 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 	return nil
 }
 
+type RecordRegistryCertificateRevoker interface {
+	RevokeZkCertificate(
+		opts *bind.TransactOpts,
+		leafIndex *big.Int,
+		zkCertificateHash [32]byte,
+		merkleProof [][32]byte,
+	) (*types.Transaction, error)
+}
+
 func constructRevokeZKCertTx(
 	ctx context.Context,
 	client ethereum.ChainIDReader,
 	providerKey *ecdsa.PrivateKey,
-	recordRegistry RecordRegistry,
+	recordRegistry RecordRegistryCertificateRevoker,
 	leafIndex int,
 	leafHash zkcertificate.Hash,
 	proof merkle.Proof,
@@ -170,6 +179,8 @@ func constructRevokeZKCertTx(
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
+
+	auth.Context = ctx
 
 	return recordRegistry.RevokeZkCertificate(
 		auth,
