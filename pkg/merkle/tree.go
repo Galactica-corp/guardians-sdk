@@ -19,9 +19,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/big"
 
 	"github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,7 +50,15 @@ type Proof struct {
 	Path      []TreeNode `json:"path"`
 }
 
-func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress string, leaf string) (Proof, error) {
+type Prover interface {
+	Proof(
+		ctx context.Context,
+		in *merkle.QueryProofRequest,
+		opts ...grpc.CallOption,
+	) (*merkle.QueryProofResponse, error)
+}
+
+func GetProof(ctx context.Context, client Prover, registryAddress string, leaf string) (Proof, error) {
 	proofResp, err := client.Proof(ctx, &merkle.QueryProofRequest{
 		Registry: registryAddress,
 		Leaf:     leaf,
@@ -65,7 +75,15 @@ func GetProof(ctx context.Context, client merkle.QueryClient, registryAddress st
 	return sdkProof, nil
 }
 
-func GetEmptyLeafProof(ctx context.Context, client merkle.QueryClient, registryAddress string) (uint32, Proof, error) {
+type EmptyLeafProver interface {
+	GetEmptyLeafProof(
+		ctx context.Context,
+		in *merkle.GetEmptyLeafProofRequest,
+		opts ...grpc.CallOption,
+	) (*merkle.GetEmptyLeafProofResponse, error)
+}
+
+func GetEmptyLeafProof(ctx context.Context, client EmptyLeafProver, registryAddress string) (uint32, Proof, error) {
 	resp, err := client.GetEmptyLeafProof(ctx, &merkle.GetEmptyLeafProofRequest{Registry: registryAddress})
 	if err != nil {
 		return 0, Proof{}, fmt.Errorf("get empty leaf index: %w", err)

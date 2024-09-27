@@ -18,6 +18,7 @@ package zkcertificate
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"strconv"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 
+	"github.com/galactica-corp/guardians-sdk/pkg/encryption"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
 
@@ -37,7 +39,7 @@ var (
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
 // It is parameterized by the type T for the content field.
 // Certificate content must be directly determined by the certificate Standard.
-type Certificate[T any] struct {
+type Certificate[T Content] struct {
 	HolderCommitment Hash         `json:"holderCommitment"`
 	LeafHash         Hash         `json:"leafHash"`
 	DID              string       `json:"did"`
@@ -172,7 +174,7 @@ func (p *ProviderData) UnmarshalJSON(data []byte) error {
 }
 
 // IssuedCertificate represents a certificate that has been issued and includes registration details.
-type IssuedCertificate[T any] struct {
+type IssuedCertificate[T Content] struct {
 	Certificate[T] `json:",inline"`
 	Registration   RegistrationDetails `json:"registration"`
 	MerkleProof    merkle.Proof        `json:"merkleProof"`
@@ -260,4 +262,133 @@ func DID(standard Standard, leafHash Hash) string {
 type FFEncoder[T Content] interface {
 	// FFEncode performs Finite Field (FF) encoding and returns the result that can be used as certificate content.
 	FFEncode() (T, error)
+}
+
+// EncryptedCertificate is a Certificate that has been encrypted.
+type EncryptedCertificate struct {
+	encryption.EncryptedMessage `json:",inline"`
+	HolderCommitment            Hash `json:"holderCommitment"`
+}
+
+// DeserializeCertificateJSON deserializes Certificate from the given [io.Reader].
+// As it is not possible to determine type of content in compile time, the returned content type is always Content.
+func DeserializeCertificateJSON(r io.Reader) (Certificate[Content], error) {
+	var alias struct {
+		HolderCommitment Hash            `json:"holderCommitment"`
+		LeafHash         Hash            `json:"leafHash"`
+		DID              string          `json:"did"`
+		Standard         Standard        `json:"zkCertStandard"`
+		Content          json.RawMessage `json:"content"`
+		ContentHash      Hash            `json:"contentHash"`
+		ExpirationDate   Timestamp       `json:"expirationDate"`
+		Provider         ProviderData    `json:"providerData"`
+		RandomSalt       string          `json:"randomSalt"`
+	}
+	if err := json.NewDecoder(r).Decode(&alias); err != nil {
+		return Certificate[Content]{}, err
+	}
+
+	content, err := decodeCertificateContent(alias.Standard, alias.Content)
+	if err != nil {
+		return Certificate[Content]{}, fmt.Errorf("decode alias content: %w", err)
+	}
+
+	return Certificate[Content]{
+		HolderCommitment: alias.HolderCommitment,
+		LeafHash:         alias.LeafHash,
+		DID:              alias.DID,
+		Standard:         alias.Standard,
+		Content:          content,
+		ContentHash:      alias.ContentHash,
+		ExpirationDate:   alias.ExpirationDate,
+		Provider:         alias.Provider,
+		RandomSalt:       alias.RandomSalt,
+	}, nil
+}
+
+// DeserializeIssuedCertificateJSON deserializes IssuedCertificate from the given [io.Reader].
+// As it is not possible to determine type of content in compile time, the returned content type is always Content.
+func DeserializeIssuedCertificateJSON(r io.Reader) (IssuedCertificate[Content], error) {
+	var alias struct {
+		HolderCommitment Hash                `json:"holderCommitment"`
+		LeafHash         Hash                `json:"leafHash"`
+		DID              string              `json:"did"`
+		Standard         Standard            `json:"zkCertStandard"`
+		Content          json.RawMessage     `json:"content"`
+		ContentHash      Hash                `json:"contentHash"`
+		ExpirationDate   Timestamp           `json:"expirationDate"`
+		Provider         ProviderData        `json:"providerData"`
+		RandomSalt       string              `json:"randomSalt"`
+		Registration     RegistrationDetails `json:"registration"`
+		MerkleProof      merkle.Proof        `json:"merkleProof"`
+	}
+	if err := json.NewDecoder(r).Decode(&alias); err != nil {
+		return IssuedCertificate[Content]{}, err
+	}
+
+	content, err := decodeCertificateContent(alias.Standard, alias.Content)
+	if err != nil {
+		return IssuedCertificate[Content]{}, fmt.Errorf("decode alias content: %w", err)
+	}
+
+	return IssuedCertificate[Content]{
+		Certificate: Certificate[Content]{
+			HolderCommitment: alias.HolderCommitment,
+			LeafHash:         alias.LeafHash,
+			DID:              alias.DID,
+			Standard:         alias.Standard,
+			Content:          content,
+			ContentHash:      alias.ContentHash,
+			ExpirationDate:   alias.ExpirationDate,
+			Provider:         alias.Provider,
+			RandomSalt:       alias.RandomSalt,
+		},
+		Registration: alias.Registration,
+		MerkleProof:  alias.MerkleProof,
+	}, nil
+}
+
+func decodeCertificateContent(
+	certificateStandard Standard,
+	certificateContent json.RawMessage,
+) (Content, error) {
+	switch certificateStandard {
+	case StandardKYC:
+		var content KYCContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
+		}
+
+		return content, nil
+	case StandardSimpleJSON:
+		var content SimpleJSONContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
+		}
+
+		return content, nil
+	case StandardTwitter:
+		var content TwitterContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode twitter certificate content json: %w", err)
+		}
+
+		return content, nil
+	case StandardREY:
+		var content REYContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode rey certificate content json: %w", err)
+		}
+
+		return content, nil
+	case StandardExchange:
+		var content ExchangeContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode exchange certificate content json: %w", err)
+		}
+
+		return content, nil
+	default:
+		return nil, fmt.Errorf("unsupported certificate standard %s", certificateStandard)
+	}
 }

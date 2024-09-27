@@ -23,7 +23,6 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -89,8 +88,8 @@ func revokeZKCertCmd(f *revokeZKCertFlags) func(cmd *cobra.Command, args []strin
 func revokeZKCert(f *revokeZKCertFlags) error {
 	ctx := context.Background()
 
-	var certificate zkcertificate.IssuedCertificate[json.RawMessage]
-	if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
+	certificate, err := deserializeIssuedCertificateJSON(f.certificateFilePath)
+	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}
 
@@ -104,45 +103,14 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
 
-	registryAddress := certificate.Registration.Address
-
-	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
-	if err != nil {
-		return fmt.Errorf("load record registry: %w", err)
-	}
-
 	providerKey, err := crypto.LoadECDSA(f.providerPrivateKeyPath)
 	if err != nil {
 		return fmt.Errorf("load provider's ethereum private key: %w", err)
 	}
 
-	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
-
-	if err := ensureProviderIsGuardian(ctx, client, registry, providerAddress); err != nil {
-		return fmt.Errorf("ensure provider is guardian: %w", err)
-	}
-
-	leafIndex := certificate.Registration.LeafIndex
-	leafHash := certificate.LeafHash
-
-	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
+	tx, err := RevokeZKCert(ctx, certificate, client, merkleProofClient, providerKey)
 	if err != nil {
-		return fmt.Errorf("get merkle proof: %w", err)
-	}
-
-	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, leafHash); err != nil {
-		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
-	}
-
-	tx, err := constructRevokeZKCertTx(ctx, client, providerKey, registry, leafIndex, leafHash, proof)
-	if err != nil {
-		return fmt.Errorf("construct transaction to revoke record from registry: %w", err)
-	}
-
-	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
-		return fmt.Errorf("wait until transaction is mined: %w", err)
-	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q failed", receipt.TxHash)
+		return fmt.Errorf("revoke zk cert: %w", err)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
@@ -150,6 +118,71 @@ func revokeZKCert(f *revokeZKCertFlags) error {
 	}
 
 	return nil
+}
+
+type EthereumRevokeClient interface {
+	bind.ContractBackend
+	bind.DeployBackend
+
+	ChainID(ctx context.Context) (*big.Int, error)
+}
+
+// RevokeZKCert revokes an issued zero-knowledge certificate (ZKCert) by removing it from the blockchain registry.
+//
+// The function performs the following steps:
+//  1. Verifies that the provider is authorized as a guardian.
+//  2. Retrieves the Merkle proof for the certificate to be revoked.
+//  3. Registers the provider for revocation and waits for its turn.
+//  4. Constructs and sends the transaction to revoke the certificate.
+func RevokeZKCert[T zkcertificate.Content](
+	ctx context.Context,
+	certificate zkcertificate.IssuedCertificate[T],
+	client EthereumRevokeClient,
+	merkleProofClient merkle.Prover,
+	providerKey *ecdsa.PrivateKey,
+) (*types.Transaction, error) {
+	chainID, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get chain id from blockchain rpc: %w", err)
+	}
+
+	registryAddress := certificate.Registration.Address
+
+	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
+	if err != nil {
+		return nil, fmt.Errorf("load record registry: %w", err)
+	}
+
+	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
+
+	if err := ensureProviderIsGuardian(ctx, client, registry, providerAddress); err != nil {
+		return nil, fmt.Errorf("ensure provider is guardian: %w", err)
+	}
+
+	leafIndex := certificate.Registration.LeafIndex
+	leafHash := certificate.LeafHash
+
+	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
+	if err != nil {
+		return nil, fmt.Errorf("get merkle proof: %w", err)
+	}
+
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, chainID, providerKey, registry, leafHash); err != nil {
+		return nil, fmt.Errorf("register and wait for zkCertificate turn: %w", err)
+	}
+
+	tx, err := constructRevokeZKCertTx(ctx, chainID, providerKey, registry, leafIndex, leafHash, proof)
+	if err != nil {
+		return nil, fmt.Errorf("construct transaction to revoke record from registry: %w", err)
+	}
+
+	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
+		return nil, fmt.Errorf("wait until transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		return nil, fmt.Errorf("transaction %q failed", receipt.TxHash)
+	}
+
+	return tx, nil
 }
 
 type RecordRegistryCertificateRevoker interface {
@@ -163,18 +196,13 @@ type RecordRegistryCertificateRevoker interface {
 
 func constructRevokeZKCertTx(
 	ctx context.Context,
-	client ethereum.ChainIDReader,
+	chainID *big.Int,
 	providerKey *ecdsa.PrivateKey,
 	recordRegistry RecordRegistryCertificateRevoker,
 	leafIndex int,
 	leafHash zkcertificate.Hash,
 	proof merkle.Proof,
 ) (*types.Transaction, error) {
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve chain id: %w", err)
-	}
-
 	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
@@ -188,4 +216,14 @@ func constructRevokeZKCertTx(
 		leafHash.Bytes32(),
 		encodeMerkleProof(proof),
 	)
+}
+
+func deserializeIssuedCertificateJSON(filePath string) (zkcertificate.IssuedCertificate[zkcertificate.Content], error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return zkcertificate.IssuedCertificate[zkcertificate.Content]{}, fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	return zkcertificate.DeserializeIssuedCertificateJSON(f)
 }

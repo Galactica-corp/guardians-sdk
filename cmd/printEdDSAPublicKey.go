@@ -66,6 +66,7 @@ func printEdDSAPublicKey(f *printEdDSAPublicKeyFlags) func(cmd *cobra.Command, a
 	}
 }
 
+// PrintEdDSAPublicKey writes the EdDSA public key which corresponds to the given private key.
 func PrintEdDSAPublicKey(privateKey babyjub.PrivateKey, w io.Writer) error {
 	publicKey := privateKey.Public()
 

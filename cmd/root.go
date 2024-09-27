@@ -21,6 +21,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
 )
 
 func NewRootCmd() *cobra.Command {
@@ -87,4 +89,14 @@ func decodeJSONFile(filePath string, target any) error {
 	}
 
 	return nil
+}
+
+func deserializeCertificateJSON(filePath string) (zkcertificate.Certificate[zkcertificate.Content], error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return zkcertificate.Certificate[zkcertificate.Content]{}, fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	return zkcertificate.DeserializeCertificateJSON(f)
 }

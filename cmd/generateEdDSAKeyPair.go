@@ -16,6 +16,7 @@
 package cmd
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 
@@ -50,7 +51,7 @@ specified output file.
 
 Example Usage:
 $ galactica-guardian generateEdDSAKeyPair -k /path/to/ethereum-key.hex -o /path/to/output.hex`,
-		RunE: generateEdDSAKeyPair(&f),
+		RunE: generateEdDSAKeyPairCmd(&f),
 	}
 
 	cmd.Flags().StringVarP(&f.privateKeyPath, "private-key-file", "k", "", "path to a file containing a hex-encoded Ethereum (ECDSA) private key")
@@ -59,33 +60,49 @@ $ galactica-guardian generateEdDSAKeyPair -k /path/to/ethereum-key.hex -o /path/
 	return cmd
 }
 
-func generateEdDSAKeyPair(f *generateEdDSAKeyPairFlags) func(cmd *cobra.Command, args []string) error {
+func generateEdDSAKeyPairCmd(f *generateEdDSAKeyPairFlags) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var privateKey babyjub.PrivateKey
-		if f.privateKeyPath != "" {
-			ethereumPrivateKey, err := crypto.LoadECDSA(f.privateKeyPath)
-			if err != nil {
-				return fmt.Errorf("load ethereum private key: %w", err)
-			}
-
-			privateKey, err = keymanagement.DeriveEdDSAKeyFromEthereumPrivateKey(ethereumPrivateKey)
-			if err != nil {
-				return fmt.Errorf("derive eddsa key: %w", err)
-			}
-		} else {
-			privateKey = babyjub.NewRandPrivKey()
-		}
-
-		if err := keymanagement.SaveEdDSA(f.outputFilePath, privateKey); err != nil {
-			return fmt.Errorf("save eddsa private key: %w", err)
-		}
-
-		_, _ = fmt.Fprintln(os.Stderr, "Saved EdDSA private key to", f.outputFilePath)
-
-		publicKey := privateKey.Public()
-
-		_, _ = fmt.Fprintln(os.Stderr, "EdDSA public key", publicKey.X, publicKey.Y)
-
-		return nil
+		return generateEdDSAKeyPair(f)
 	}
+}
+
+func generateEdDSAKeyPair(f *generateEdDSAKeyPairFlags) error {
+	var ethereumPrivateKey *ecdsa.PrivateKey
+	if f.privateKeyPath != "" {
+		var err error
+		ethereumPrivateKey, err = crypto.LoadECDSA(f.privateKeyPath)
+		if err != nil {
+			return fmt.Errorf("load ethereum private key: %w", err)
+		}
+	}
+
+	privateKey, err := GenerateEdDSAKeyPair(ethereumPrivateKey)
+	if err != nil {
+		return fmt.Errorf("generate eddsa: %w", err)
+	}
+
+	if err := keymanagement.SaveEdDSA(f.outputFilePath, privateKey); err != nil {
+		return fmt.Errorf("save eddsa private key: %w", err)
+	}
+
+	_, _ = fmt.Fprintln(os.Stderr, "Saved EdDSA private key to", f.outputFilePath)
+
+	publicKey := privateKey.Public()
+
+	_, _ = fmt.Fprintln(os.Stderr, "EdDSA public key", publicKey.X, publicKey.Y)
+
+	return nil
+}
+
+// GenerateEdDSAKeyPair generates an EdDSA key pair.
+//
+// The function performs the following steps:
+//  1. If an Ethereum private key is provided, derives the EdDSA private key from it.
+//  2. If no Ethereum private key is provided, generates a random EdDSA private key.
+func GenerateEdDSAKeyPair(ethereumPrivateKey *ecdsa.PrivateKey) (babyjub.PrivateKey, error) {
+	if ethereumPrivateKey == nil {
+		return babyjub.NewRandPrivKey(), nil
+	}
+
+	return keymanagement.DeriveEdDSAKeyFromEthereumPrivateKey(ethereumPrivateKey)
 }

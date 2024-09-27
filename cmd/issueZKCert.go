@@ -32,8 +32,6 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/spf13/cobra"
 
-	merkleproofservice "github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
-
 	"github.com/galactica-corp/guardians-sdk/internal/cli"
 	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
@@ -101,8 +99,8 @@ func issueZKCertCmd(f *issueZKCertFlags) func(cmd *cobra.Command, args []string)
 func issueZKCert(f *issueZKCertFlags) error {
 	ctx := context.Background()
 
-	var cert zkcertificate.Certificate[json.RawMessage]
-	if err := decodeJSONFile(f.certificateFilePath, &cert); err != nil {
+	cert, err := deserializeCertificateJSON(f.certificateFilePath)
+	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}
 
@@ -116,62 +114,103 @@ func issueZKCert(f *issueZKCertFlags) error {
 		return fmt.Errorf("connect to merkle proof service: %w", err)
 	}
 
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		return fmt.Errorf("retrieve chain-id: %w", err)
-	}
-
 	registryAddress := f.registryAddress.Address()
-
-	registry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
-	if err != nil {
-		return fmt.Errorf("load record registry: %w", err)
-	}
 
 	providerKey, err := crypto.LoadECDSA(f.providerPrivateKeyPath)
 	if err != nil {
 		return fmt.Errorf("load provider's ethereum private key: %w", err)
 	}
 
-	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
-
-	if err := ensureProviderIsGuardian(ctx, client, registry, providerAddress); err != nil {
-		return fmt.Errorf("ensure provider is guardian: %w", err)
-	}
-
-	leafIndex, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	tx, issuedCertificate, err := IssueZKCert(ctx, cert, client, merkleProofClient, registryAddress, providerKey)
 	if err != nil {
-		return fmt.Errorf("find empty tree leaf: %w", err)
-	}
-
-	leafHash := cert.LeafHash
-
-	if err := registerAndWaitForZkCertificateTurn(ctx, client, providerKey, registry, leafHash); err != nil {
-		return fmt.Errorf("register and wait for zkCertificate turn: %w", err)
-	}
-
-	tx, err := constructIssueZKCertTx(ctx, client, providerKey, registryAddress, leafIndex, cert, proof)
-	if err != nil {
-		return fmt.Errorf("construct transaction to add record to registry: %w", err)
-	}
-
-	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
-		return fmt.Errorf("wait until transaction is mined: %w", err)
-	} else if receipt.Status == 0 {
-		return fmt.Errorf("transaction %q failed", receipt.TxHash)
+		return fmt.Errorf("issue zk cert: %w", err)
 	}
 
 	if err := json.NewEncoder(os.Stdout).Encode(tx); err != nil {
 		return fmt.Errorf("encode registration transaction to json: %w", err)
 	}
 
-	if err := buildAndSaveOutput(f.outputFilePath, cert, registryAddress, chainID, leafIndex, proof); err != nil {
-		return fmt.Errorf("collect output: %w", err)
+	if err := encodeToJSONFile(f.outputFilePath, issuedCertificate); err != nil {
+		return fmt.Errorf("save issued certificate: %w", err)
 	}
 
 	_, _ = fmt.Fprintln(os.Stderr, "Saved issued certificate to", f.outputFilePath)
 
 	return nil
+}
+
+type EthereumIssueClient interface {
+	bind.ContractBackend
+	bind.DeployBackend
+
+	ChainID(ctx context.Context) (*big.Int, error)
+}
+
+// IssueZKCert registers and issues a zero-knowledge certificate (ZKCert) on-chain.
+//
+// The function performs the following steps:
+//  1. Verifies that the provider is authorized as a guardian.
+//  2. Finds an empty leaf in the Merkle tree for certificate registration.
+//  3. Registers the certificate and waits for the provider's turn to issue it.
+//  4. Constructs and sends the transaction to add the certificate on-chain.
+func IssueZKCert[T zkcertificate.Content](
+	ctx context.Context,
+	cert zkcertificate.Certificate[T],
+	ethRPC EthereumIssueClient,
+	merkleProofClient merkle.EmptyLeafProver,
+	registryAddress common.Address,
+	providerKey *ecdsa.PrivateKey,
+) (*types.Transaction, zkcertificate.IssuedCertificate[T], error) {
+	chainID, err := ethRPC.ChainID(ctx)
+	if err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("retrieve chain-id: %w", err)
+	}
+
+	registry, err := contracts.NewZkCertificateRegistry(registryAddress, ethRPC)
+	if err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("load record registry: %w", err)
+	}
+
+	providerAddress := crypto.PubkeyToAddress(providerKey.PublicKey)
+
+	if err := ensureProviderIsGuardian(ctx, ethRPC, registry, providerAddress); err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("ensure provider is guardian: %w", err)
+	}
+
+	index, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	if err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("find empty tree leaf: %w", err)
+	}
+
+	leafHash := cert.LeafHash
+
+	if err := registerAndWaitForZkCertificateTurn(ctx, ethRPC, chainID, providerKey, registry, leafHash); err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("register and wait for issue turn: %w", err)
+	}
+
+	tx, err := constructIssueZKCertTx(ctx, ethRPC, chainID, providerKey, registryAddress, index, cert, proof)
+	if err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("construct add record tx: %w", err)
+	}
+
+	if receipt, err := bind.WaitMined(ctx, ethRPC, tx); err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("wait until transaction is mined: %w", err)
+	} else if receipt.Status == 0 {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("transaction %q failed", receipt.TxHash)
+	}
+
+	proof.Leaf = merkle.TreeNode{Value: uint256.MustFromBig(cert.LeafHash.BigInt())}
+
+	return tx, zkcertificate.IssuedCertificate[T]{
+		Certificate: cert,
+		Registration: zkcertificate.RegistrationDetails{
+			Address:   registryAddress,
+			ChainID:   chainID,
+			Revocable: true,
+			LeafIndex: index,
+		},
+		MerkleProof: proof,
+	}, nil
 }
 
 func connectToBlockchainRPC(ctx context.Context, rawURL string) (*ethclient.Client, error) {
@@ -215,7 +254,7 @@ func ensureProviderIsGuardian(
 
 func findEmptyTreeLeaf(
 	ctx context.Context,
-	client merkleproofservice.QueryClient,
+	client merkle.EmptyLeafProver,
 	registryAddress common.Address,
 ) (int, merkle.Proof, error) {
 	emptyLeafIndex, proof, err := merkle.GetEmptyLeafProof(ctx, client, registryAddress.Hex())
@@ -226,20 +265,16 @@ func findEmptyTreeLeaf(
 	return int(emptyLeafIndex), proof, nil
 }
 
-func constructIssueZKCertTx(
+func constructIssueZKCertTx[T zkcertificate.Content](
 	ctx context.Context,
-	client *ethclient.Client,
+	client bind.ContractBackend,
+	chainID *big.Int,
 	providerKey *ecdsa.PrivateKey,
 	registryAddress common.Address,
 	leafIndex int,
-	cert zkcertificate.Certificate[json.RawMessage],
+	cert zkcertificate.Certificate[T],
 	proof merkle.Proof,
 ) (*types.Transaction, error) {
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve chain id: %w", err)
-	}
-
 	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
@@ -255,11 +290,7 @@ func constructIssueZKCertTx(
 		}
 
 		// get KYC data from content to get the ID hash
-		var kycContent zkcertificate.KYCContent
-		err = json.Unmarshal(cert.Content, &kycContent)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal kyc content: %w", err)
-		}
+		kycContent := any(cert.Content).(zkcertificate.KYCContent)
 
 		idHash, err := kycContent.IDHash()
 		if err != nil {
@@ -290,32 +321,6 @@ func constructIssueZKCertTx(
 	}
 }
 
-func buildAndSaveOutput[T any](
-	outputFilePath string,
-	certificate zkcertificate.Certificate[T],
-	registryAddress common.Address,
-	chainID *big.Int,
-	leafIndex int,
-	proof merkle.Proof,
-) error {
-	proof.Leaf = merkle.TreeNode{Value: uint256.MustFromBig(certificate.LeafHash.BigInt())}
-
-	if err := encodeToJSONFile(outputFilePath, zkcertificate.IssuedCertificate[T]{
-		Certificate: certificate,
-		Registration: zkcertificate.RegistrationDetails{
-			Address:   registryAddress,
-			ChainID:   chainID,
-			Revocable: true,
-			LeafIndex: leafIndex,
-		},
-		MerkleProof: proof,
-	}); err != nil {
-		return fmt.Errorf("save issued certificate: %w", err)
-	}
-
-	return nil
-}
-
 func encodeMerkleProof(proof merkle.Proof) [][32]byte {
 	res := make([][32]byte, len(proof.Path))
 
@@ -333,16 +338,11 @@ type RecordRegistryQueue interface {
 
 func registerToQueue(
 	ctx context.Context,
-	client *ethclient.Client,
+	chainID *big.Int,
 	providerKey *ecdsa.PrivateKey,
 	registry RecordRegistryQueue,
 	leafHash zkcertificate.Hash,
 ) (*types.Transaction, error) {
-	chainID, err := client.ChainID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve chain id: %w", err)
-	}
-
 	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
@@ -367,12 +367,13 @@ func registerToQueue(
 
 func registerAndWaitForZkCertificateTurn(
 	ctx context.Context,
-	client *ethclient.Client,
+	client bind.DeployBackend,
+	chainID *big.Int,
 	providerKey *ecdsa.PrivateKey,
 	registry RecordRegistryQueue,
 	leafHash zkcertificate.Hash,
 ) error {
-	registerTx, err := registerToQueue(ctx, client, providerKey, registry, leafHash)
+	registerTx, err := registerToQueue(ctx, chainID, providerKey, registry, leafHash)
 	if err != nil {
 		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
 	}

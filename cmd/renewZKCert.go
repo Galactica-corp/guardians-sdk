@@ -17,13 +17,13 @@ package cmd
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"os"
 	"time"
 
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"
@@ -85,19 +85,9 @@ func renewZKCert(f *renewZKCertFlags) error {
 		return fmt.Errorf("invalid expiration date: %w", err)
 	}
 
-	var certificate zkcertificate.Certificate[json.RawMessage]
-	if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
+	certificate, err := deserializeCertificateJSON(f.certificateFilePath)
+	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
-	}
-
-	certificateContent, err := decodeCertificateContent(certificate.Standard, certificate.Content)
-	if err != nil {
-		return fmt.Errorf("set new expiration date: %w", err)
-	}
-
-	contentHash, err := certificateContent.Hash()
-	if err != nil {
-		return fmt.Errorf("hash certificate content: %w", err)
 	}
 
 	providerKey, err := keymanagement.LoadEdDSA(f.providerPrivateKeyPath)
@@ -105,26 +95,7 @@ func renewZKCert(f *renewZKCertFlags) error {
 		return fmt.Errorf("load provider private key: %w", err)
 	}
 
-	signature, err := zkcertificate.SignCertificate(providerKey, contentHash, certificate.HolderCommitment)
-	if err != nil {
-		return fmt.Errorf("sign certificate: %w", err)
-	}
-
-	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
-	if err != nil {
-		return fmt.Errorf("generate random salt: %w", err)
-	}
-
-	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
-
-	newCertificate, err := zkcertificate.New(
-		certificate.HolderCommitment,
-		certificateContent,
-		providerKey.Public(),
-		signature,
-		randomSalt,
-		expirationDate,
-	)
+	newCertificate, err := RenewZKCert(certificate, providerKey, expirationDate)
 	if err != nil {
 		return fmt.Errorf("create new certificate: %w", err)
 	}
@@ -139,6 +110,40 @@ func renewZKCert(f *renewZKCertFlags) error {
 	return nil
 }
 
+// RenewZKCert renews an existing zero-knowledge certificate (ZKCert) by creating a new certificate
+// with an updated expiration date.
+func RenewZKCert[T zkcertificate.Content](
+	certificate zkcertificate.Certificate[T],
+	providerKey babyjub.PrivateKey,
+	expirationDate time.Time,
+) (*zkcertificate.Certificate[T], error) {
+	contentHash, err := certificate.Content.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("hash certificate content: %w", err)
+	}
+
+	signature, err := zkcertificate.SignCertificate(providerKey, contentHash, certificate.HolderCommitment)
+	if err != nil {
+		return nil, fmt.Errorf("sign certificate: %w", err)
+	}
+
+	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
+	if err != nil {
+		return nil, fmt.Errorf("generate random salt: %w", err)
+	}
+
+	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
+
+	return zkcertificate.New[T](
+		certificate.HolderCommitment,
+		certificate.Content,
+		providerKey.Public(),
+		signature,
+		randomSalt,
+		expirationDate,
+	)
+}
+
 func printRenewalInstruction(oldCertificatePath string, newCertificatePath string) {
 	_, _ = fmt.Fprintf(
 		os.Stderr,
@@ -149,49 +154,4 @@ galactica-guardian issueZKCert -c %s -k provider_private_key.hex -o issued-prolo
 		oldCertificatePath,
 		newCertificatePath,
 	)
-}
-
-func decodeCertificateContent(
-	certificateStandard zkcertificate.Standard,
-	certificateContent json.RawMessage,
-) (zkcertificate.Content, error) {
-	switch certificateStandard {
-	case zkcertificate.StandardKYC:
-		var content zkcertificate.KYCContent
-		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
-		}
-
-		return content, nil
-	case zkcertificate.StandardSimpleJSON:
-		var content zkcertificate.SimpleJSONContent
-		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
-		}
-
-		return content, nil
-	case zkcertificate.StandardTwitter:
-		var content zkcertificate.TwitterContent
-		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode twitter certificate content json: %w", err)
-		}
-
-		return content, nil
-	case zkcertificate.StandardREY:
-		var content zkcertificate.REYContent
-		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode rey certificate content json: %w", err)
-		}
-
-		return content, nil
-	case zkcertificate.StandardExchange:
-		var content zkcertificate.ExchangeContent
-		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode exchange certificate content json: %w", err)
-		}
-
-		return content, nil
-	default:
-		return nil, fmt.Errorf("unsupported certificate standard %s", certificateStandard)
-	}
 }

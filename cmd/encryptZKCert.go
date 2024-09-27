@@ -16,7 +16,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -65,37 +64,47 @@ $ galactica-guardian encryptZKCert -c zkcert.json -H holder_commitment.json -o e
 
 func encryptZKCertCmd(f *encryptZKCertFlags) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		var certificate zkcertificate.Certificate[json.RawMessage]
-		if err := decodeJSONFile(f.certificateFilePath, &certificate); err != nil {
-			return fmt.Errorf("read certificate: %w", err)
-		}
-
-		var holderCommitment zkcertificate.HolderCommitment
-		if err := decodeJSONFile(f.holderFilePath, &holderCommitment); err != nil {
-			return fmt.Errorf("read holder commitment: %w", err)
-		}
-
-		if len(holderCommitment.EncryptionKey) != 32 {
-			return fmt.Errorf("invalid holder's encryption key: expected 32-byte long key")
-		}
-
-		encryptedMessage, err := encryption.EncryptWithPadding([32]byte(holderCommitment.EncryptionKey), certificate)
-		if err != nil {
-			return fmt.Errorf("encrypt certificate: %w", err)
-		}
-
-		if err := encodeToJSONFile(f.outputFilePath, struct {
-			encryption.EncryptedMessage `json:",inline"`
-			HolderCommitment            zkcertificate.Hash `json:"holderCommitment"`
-		}{
-			EncryptedMessage: encryptedMessage,
-			HolderCommitment: holderCommitment.CommitmentHash,
-		}); err != nil {
-			return fmt.Errorf("save encrypted certificate: %w", err)
-		}
-
-		_, _ = fmt.Fprintln(os.Stderr, "Saved encrypted certificate to", f.outputFilePath)
-
-		return nil
+		return encryptZKCert(f)
 	}
+}
+
+func encryptZKCert(f *encryptZKCertFlags) error {
+	certificate, err := deserializeCertificateJSON(f.certificateFilePath)
+	if err != nil {
+		return fmt.Errorf("read certificate: %w", err)
+	}
+
+	var holderCommitment zkcertificate.HolderCommitment
+	if err := decodeJSONFile(f.holderFilePath, &holderCommitment); err != nil {
+		return fmt.Errorf("read holder commitment: %w", err)
+	}
+
+	encryptedCertificate, err := EncryptZKCert(certificate, holderCommitment)
+	if err != nil {
+		return fmt.Errorf("encrypt certificate: %w", err)
+	}
+
+	if err := encodeToJSONFile(f.outputFilePath, encryptedCertificate); err != nil {
+		return fmt.Errorf("save encrypted certificate: %w", err)
+	}
+
+	_, _ = fmt.Fprintln(os.Stderr, "Saved encrypted certificate to", f.outputFilePath)
+
+	return nil
+}
+
+// EncryptZKCert encrypts a zero-knowledge certificate using the holder's commitment encryption key.
+func EncryptZKCert[T zkcertificate.Content](
+	certificate zkcertificate.Certificate[T],
+	holderCommitment zkcertificate.HolderCommitment,
+) (zkcertificate.EncryptedCertificate, error) {
+	encryptedMessage, err := encryption.EncryptWithPadding([32]byte(holderCommitment.EncryptionKey), certificate)
+	if err != nil {
+		return zkcertificate.EncryptedCertificate{}, fmt.Errorf("encrypt certificate: %w", err)
+	}
+
+	return zkcertificate.EncryptedCertificate{
+		EncryptedMessage: encryptedMessage,
+		HolderCommitment: holderCommitment.CommitmentHash,
+	}, nil
 }

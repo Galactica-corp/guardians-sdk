@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"
@@ -109,36 +110,12 @@ func createZKCert(f *createZKCertFlags) error {
 		return fmt.Errorf("read certificate content: %w", err)
 	}
 
-	contentHash, err := certificateContent.Hash()
-	if err != nil {
-		return fmt.Errorf("hash certificate content: %w", err)
-	}
-
 	providerKey, err := keymanagement.LoadEdDSA(f.providerPrivateKeyPath)
 	if err != nil {
 		return fmt.Errorf("load provider private key: %w", err)
 	}
 
-	signature, err := zkcertificate.SignCertificate(providerKey, contentHash, holderCommitment.CommitmentHash)
-	if err != nil {
-		return fmt.Errorf("sign certificate: %w", err)
-	}
-
-	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
-	if err != nil {
-		return fmt.Errorf("generate random salt: %w", err)
-	}
-
-	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
-
-	certificate, err := zkcertificate.New(
-		holderCommitment.CommitmentHash,
-		certificateContent,
-		providerKey.Public(),
-		signature,
-		randomSalt,
-		expirationDate,
-	)
+	certificate, err := CreateZKCert(certificateContent, holderCommitment, providerKey, expirationDate)
 	if err != nil {
 		return fmt.Errorf("create certificate: %w", err)
 	}
@@ -150,6 +127,49 @@ func createZKCert(f *createZKCertFlags) error {
 	_, _ = fmt.Fprintln(os.Stderr, "Saved certificate JSON to", f.outputFilePath)
 
 	return nil
+}
+
+// CreateZKCert generates a zero-knowledge certificate (ZKCert) based on the
+// provided holder's commitment, certificate content, and the private key of the provider.
+//
+// This function performs the following steps:
+//  1. Hashes the certificate content.
+//  2. Signs the certificate using the provider's private key and the hashed values.
+//  3. Generates a random salt within the range [1, MaxInt64].
+//  4. Constructs and returns the ZKCert.
+//
+// Certificate standard is inferred from the certificateContent using method [zkcertificate.Content.Standard].
+func CreateZKCert[T zkcertificate.Content](
+	certificateContent T,
+	holderCommitment zkcertificate.HolderCommitment,
+	providerKey babyjub.PrivateKey,
+	expirationDate time.Time,
+) (*zkcertificate.Certificate[T], error) {
+	contentHash, err := certificateContent.Hash()
+	if err != nil {
+		return nil, fmt.Errorf("hash certificate content: %w", err)
+	}
+
+	signature, err := zkcertificate.SignCertificate(providerKey, contentHash, holderCommitment.CommitmentHash)
+	if err != nil {
+		return nil, fmt.Errorf("sign certificate: %w", err)
+	}
+
+	salt, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)) // [0, MaxInt64)
+	if err != nil {
+		return nil, fmt.Errorf("generate random salt: %w", err)
+	}
+
+	randomSalt := salt.Int64() + 1 // [1, MaxInt64]
+
+	return zkcertificate.New(
+		holderCommitment.CommitmentHash,
+		certificateContent,
+		providerKey.Public(),
+		signature,
+		randomSalt,
+		expirationDate,
+	)
 }
 
 func readCertificateContent(filePath string, standard zkcertificate.Standard) (zkcertificate.Content, error) {
