@@ -125,7 +125,7 @@ func TestKYCContent_Hash(t *testing.T) {
 
 	hash, err := kycContent.Hash()
 	require.NoError(t, err)
-	require.Equal(t, mustHashFromString("17914719627421525808158970735216338105805814372033137774126563568134622504748"), hash)
+	require.Equal(t, mustHashFromString("13498937448046187479975980844060005602014574276619662435996314654414855730267"), hash)
 }
 
 func mustHashFromString(s string) zkcertificate.Hash {
@@ -156,5 +156,5 @@ func TestKYCContent_IDHash(t *testing.T) {
 
 	idHash, err := kycContent.IDHash()
 	require.NoError(t, err)
-	require.Equal(t, mustHashFromString("2631591587246391270888637927706583337682035735548049498259193277656977470874"), idHash)
+	require.Equal(t, mustHashFromString("5606249467514511053794405094500185048153115639175989255899284975583206743707"), idHash)
 }

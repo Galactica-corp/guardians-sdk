@@ -236,15 +236,16 @@ func LeafHash(
 	expirationDate time.Time,
 ) (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
+		// fields ordered alphabetically regarding their JSON key in the circuit
 		contentHash.BigInt(),
+		big.NewInt(expirationDate.Unix()),
+		commitmentHash.BigInt(),
 		providerPublicKey.X,
 		providerPublicKey.Y,
-		signature.S,
 		signature.R8.X,
 		signature.R8.Y,
-		commitmentHash.BigInt(),
+		signature.S,
 		big.NewInt(salt),
-		big.NewInt(expirationDate.Unix()),
 	})
 	if err != nil {
 		return Hash{}, fmt.Errorf("compute leaf hash: %w", err)
