@@ -19,11 +19,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"math/big"
 
 	"github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
