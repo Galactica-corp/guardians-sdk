@@ -69,7 +69,7 @@ func encryptZKCertCmd(f *encryptZKCertFlags) func(cmd *cobra.Command, args []str
 }
 
 func encryptZKCert(f *encryptZKCertFlags) error {
-	certificate, err := deserializeCertificateJSON(f.certificateFilePath)
+	certificate, err := deserializeIssuedCertificateJSON(f.certificateFilePath)
 	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}
@@ -95,7 +95,7 @@ func encryptZKCert(f *encryptZKCertFlags) error {
 
 // EncryptZKCert encrypts a zero-knowledge certificate using the holder's commitment encryption key.
 func EncryptZKCert[T zkcertificate.Content](
-	certificate zkcertificate.Certificate[T],
+	certificate zkcertificate.IssuedCertificate[T],
 	holderCommitment zkcertificate.HolderCommitment,
 ) (zkcertificate.EncryptedCertificate, error) {
 	encryptedMessage, err := encryption.EncryptWithPadding([32]byte(holderCommitment.EncryptionKey), certificate)
