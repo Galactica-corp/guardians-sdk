@@ -106,10 +106,11 @@ func (t TwitterContent) Hash() (Hash, error) {
 	}
 
 	hash, err := poseidon.Hash([]*big.Int{
+		// fields ordered alphabetically regarding their JSON key
 		big.NewInt(t.CreatedAt),
-		t.ID.BigInt(),
 		new(big.Int).SetUint64(uint64(t.FollowersCount)),
 		new(big.Int).SetUint64(uint64(t.FollowingCount)),
+		t.ID.BigInt(),
 		new(big.Int).SetUint64(uint64(t.ListedCount)),
 		new(big.Int).SetUint64(uint64(t.TweetCount)),
 		t.Username.BigInt(),

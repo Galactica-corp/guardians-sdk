@@ -88,11 +88,12 @@ type REYContent struct {
 // Hash implements Content.
 func (c REYContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
-		c.XID.BigInt(),
-		c.XUsername.BigInt(),
+		// fields ordered alphabetically regarding their JSON key
+		new(big.Int).SetUint64(uint64(c.REYFaction)),
 		new(big.Int).SetUint64(uint64(c.REYScoreAll)),
 		new(big.Int).SetUint64(uint64(c.REYScoreGalactica)),
-		new(big.Int).SetUint64(uint64(c.REYFaction)),
+		c.XID.BigInt(),
+		c.XUsername.BigInt(),
 	})
 	if err != nil {
 		return Hash{}, err

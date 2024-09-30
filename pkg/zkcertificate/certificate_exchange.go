@@ -87,10 +87,11 @@ type ExchangeContent struct {
 // Hash implements Content.
 func (u ExchangeContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
+		// fields ordered alphabetically regarding their JSON key
 		u.Address.BigInt(),
-		u.TotalSwapVolume,
-		u.SwapVolumeYear,
 		u.SwapVolumeHalfYear,
+		u.SwapVolumeYear,
+		u.TotalSwapVolume,
 	})
 	if err != nil {
 		return Hash{}, err

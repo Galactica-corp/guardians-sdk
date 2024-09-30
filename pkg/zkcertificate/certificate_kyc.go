@@ -158,19 +158,20 @@ func (c KYCContent) Standard() Standard {
 // Hash computes and returns the hash of the KYCContent instance.
 func (c KYCContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
-		c.Surname.BigInt(),
+		// fields ordered alphabetically regarding their JSON key
+		c.Citizenship.BigInt(),
+		c.Country.BigInt(),
+		big.NewInt(int64(c.DayOfBirth)),
 		c.Forename.BigInt(),
 		c.MiddleName.BigInt(),
-		big.NewInt(int64(c.YearOfBirth)),
 		big.NewInt(int64(c.MonthOfBirth)),
-		big.NewInt(int64(c.DayOfBirth)),
-		big.NewInt(int64(c.VerificationLevel)),
-		c.StreetAndNumber.BigInt(),
 		c.Postcode.BigInt(),
-		c.Town.BigInt(),
 		c.Region.BigInt(),
-		c.Country.BigInt(),
-		c.Citizenship.BigInt(),
+		c.StreetAndNumber.BigInt(),
+		c.Surname.BigInt(),
+		c.Town.BigInt(),
+		big.NewInt(int64(c.VerificationLevel)),
+		big.NewInt(int64(c.YearOfBirth)),
 	})
 	if err != nil {
 		return Hash{}, err
@@ -207,13 +208,14 @@ func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
 // IDHash computes and returns a user's ID hash for registration of the HumanID salt hash.
 func (c *KYCContent) IDHash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
-		c.Surname.BigInt(),
+		// fields ordered alphabetically regarding their JSON key
+		c.Citizenship.BigInt(),
+		big.NewInt(int64(c.DayOfBirth)),
 		c.Forename.BigInt(),
 		c.MiddleName.BigInt(),
-		big.NewInt(int64(c.YearOfBirth)),
 		big.NewInt(int64(c.MonthOfBirth)),
-		big.NewInt(int64(c.DayOfBirth)),
-		c.Citizenship.BigInt(),
+		c.Surname.BigInt(),
+		big.NewInt(int64(c.YearOfBirth)),
 	})
 	if err != nil {
 		return Hash{}, fmt.Errorf("compute id hash: %w", err)
