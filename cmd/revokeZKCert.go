@@ -218,13 +218,3 @@ func constructRevokeZKCertTx(
 		encodeMerkleProof(proof),
 	)
 }
-
-func deserializeIssuedCertificateJSON(filePath string) (zkcertificate.IssuedCertificate[zkcertificate.Content], error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return zkcertificate.IssuedCertificate[zkcertificate.Content]{}, fmt.Errorf("open file: %w", err)
-	}
-	defer f.Close()
-
-	return zkcertificate.DeserializeIssuedCertificateJSON(f)
-}

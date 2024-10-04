@@ -100,3 +100,13 @@ func deserializeCertificateJSON(filePath string) (zkcertificate.Certificate[zkce
 
 	return zkcertificate.DeserializeCertificateJSON(f)
 }
+
+func deserializeIssuedCertificateJSON(filePath string) (zkcertificate.IssuedCertificate[zkcertificate.Content], error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return zkcertificate.IssuedCertificate[zkcertificate.Content]{}, fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	return zkcertificate.DeserializeIssuedCertificateJSON(f)
+}
