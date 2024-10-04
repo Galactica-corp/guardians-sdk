@@ -177,15 +177,15 @@ func IssueZKCert[T zkcertificate.Content](
 		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	index, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
-	if err != nil {
-		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("find empty tree leaf: %w", err)
-	}
-
 	leafHash := cert.LeafHash
 
 	if err := registerAndWaitForZkCertificateTurn(ctx, ethRPC, chainID, providerKey, registry, leafHash); err != nil {
 		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("register and wait for issue turn: %w", err)
+	}
+
+	index, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	if err != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("find empty tree leaf: %w", err)
 	}
 
 	tx, err := constructIssueZKCertTx(ctx, ethRPC, chainID, providerKey, registryAddress, index, cert, proof)

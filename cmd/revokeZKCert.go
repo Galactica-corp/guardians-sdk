@@ -159,17 +159,18 @@ func RevokeZKCert[T zkcertificate.Content](
 		return nil, fmt.Errorf("ensure provider is guardian: %w", err)
 	}
 
-	leafIndex := certificate.Registration.LeafIndex
 	leafHash := certificate.LeafHash
+
+	if err := registerAndWaitForZkCertificateTurn(ctx, client, chainID, providerKey, registry, leafHash); err != nil {
+		return nil, fmt.Errorf("register and wait for zkCertificate turn: %w", err)
+	}
 
 	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
 	if err != nil {
 		return nil, fmt.Errorf("get merkle proof: %w", err)
 	}
 
-	if err := registerAndWaitForZkCertificateTurn(ctx, client, chainID, providerKey, registry, leafHash); err != nil {
-		return nil, fmt.Errorf("register and wait for zkCertificate turn: %w", err)
-	}
+	leafIndex := certificate.Registration.LeafIndex
 
 	tx, err := constructRevokeZKCertTx(ctx, chainID, providerKey, registry, leafIndex, leafHash, proof)
 	if err != nil {
