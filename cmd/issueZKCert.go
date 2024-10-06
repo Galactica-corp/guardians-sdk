@@ -180,7 +180,7 @@ func IssueZKCert[T zkcertificate.Content](
 	if cert.Standard == zkcertificate.StandardKYC {
 		content := any(cert.Content).(zkcertificate.KYCContent)
 
-		if err := ensureKYCSaltIsCompatible(ctx, content, cert.HolderCommitment, ethRPC, registryAddress); err != nil {
+		if err := ensureKYCSaltIsCompatible(ctx, content, cert.HolderCommitment, ethRPC, registryAddress, providerAddress); err != nil {
 			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("ensure KYC salt is compatible: %w", err)
 		}
 	}
@@ -227,6 +227,7 @@ func ensureKYCSaltIsCompatible(
 	salt zkcertificate.Hash,
 	ethRPC EthereumIssueClient,
 	registryAddress common.Address,
+	providerAddress common.Address,
 ) error {
 	recordRegistry, err := contracts.NewZkKYCRegistry(registryAddress, ethRPC)
 	if err != nil {
@@ -248,7 +249,10 @@ func ensureKYCSaltIsCompatible(
 		return fmt.Errorf("get id hash: %w", err)
 	}
 
-	registeredHash, err := saltRegistry.GetSaltHash(&bind.CallOpts{Context: ctx}, idHash.BigInt())
+	registeredHash, err := saltRegistry.GetSaltHash(&bind.CallOpts{
+		Context: ctx,
+		From:    providerAddress,
+	}, idHash.BigInt())
 	if err != nil {
 		return fmt.Errorf("get registered salt: %w", err)
 	}
