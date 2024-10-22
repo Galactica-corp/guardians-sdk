@@ -15,6 +15,29 @@
 
 package validation
 
-import "github.com/go-playground/validator/v10"
+import (
+	"fmt"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/shopspring/decimal"
+)
 
 var Validate = validator.New(validator.WithRequiredStructEnabled())
+
+// init function to register custom validators when the package is imported
+func init() {
+	err := Validate.RegisterValidation("decimal_gt_0", customDecimalGreaterThanZero)
+	if err != nil {
+		fmt.Println("Error registering validation:", err)
+	}
+}
+
+// customDecimalGreaterThanZero is a custom validation function to check if decimal is greater than zero
+func customDecimalGreaterThanZero(fl validator.FieldLevel) bool {
+	value, ok := fl.Field().Interface().(decimal.Decimal)
+	if !ok {
+		return false
+	}
+
+	return value.GreaterThan(decimal.Zero)
+}
