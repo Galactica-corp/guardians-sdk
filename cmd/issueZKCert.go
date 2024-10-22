@@ -291,12 +291,12 @@ func ensureProviderIsGuardian(
 		return fmt.Errorf("bind guardian registry contract: %w", err)
 	}
 
-	guardian, err := guardianRegistry.Guardians(&bind.CallOpts{Context: ctx}, providerAddress)
+	whitelisted, err := guardianRegistry.IsWhitelisted(&bind.CallOpts{Context: ctx}, providerAddress)
 	if err != nil {
 		return fmt.Errorf("retrieve guardian whitelist status: %w", err)
 	}
 
-	if !guardian.Whitelisted {
+	if !whitelisted {
 		return fmt.Errorf("provider %s is not a guardian yet", providerAddress)
 	}
 
