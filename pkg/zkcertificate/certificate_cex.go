@@ -16,9 +16,7 @@
 package zkcertificate
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -27,68 +25,54 @@ import (
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
-// ExchangeInputs represent the input data for verification of trading on an exchange.
-type ExchangeInputs struct {
-	Address            string          `json:"address" validate:"required,eth_addr"`
-	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume"`
+// CEXInputs represent the input data for verification of trading on a centralized exchange.
+type CEXInputs struct {
+	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume" validate:"required,decimal_gt_0"`
 	SwapVolumeYear     decimal.Decimal `json:"swapVolumeYear"`
 	SwapVolumeHalfYear decimal.Decimal `json:"swapVolumeHalfYear"`
 }
 
 // FFEncode implements FFEncoder.
-func (u *ExchangeInputs) FFEncode() (ExchangeContent, error) {
-	addressBytes, err := hex.DecodeString(u.Address[2:])
-	if err != nil {
-		return ExchangeContent{}, fmt.Errorf("invalid address: %v", err)
-	}
-
-	addressHash, err := poseidon.HashBytes(addressBytes)
-	if err != nil {
-		return ExchangeContent{}, fmt.Errorf("hash address: %v", err)
-	}
-
-	return ExchangeContent{
-		Address:            HashFromBigInt(addressHash),
+func (u *CEXInputs) FFEncode() (CEXContent, error) {
+	return CEXContent{
 		TotalSwapVolume:    dollarsToCentsTruncated(u.TotalSwapVolume),
 		SwapVolumeYear:     dollarsToCentsTruncated(u.SwapVolumeYear),
 		SwapVolumeHalfYear: dollarsToCentsTruncated(u.SwapVolumeHalfYear),
 	}, nil
 }
 
-func (u *ExchangeInputs) Validate() error {
+func (u *CEXInputs) Validate() error {
 	return validation.Validate.Struct(u)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (u *ExchangeInputs) UnmarshalJSON(data []byte) error {
-	type Alias ExchangeInputs
+func (u *CEXInputs) UnmarshalJSON(data []byte) error {
+	type Alias CEXInputs
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*ExchangeInputs)(&alias).Validate(); err != nil {
+	if err := (*CEXInputs)(&alias).Validate(); err != nil {
 		return err
 	}
 
-	*u = ExchangeInputs(alias)
+	*u = CEXInputs(alias)
 	return nil
 }
 
-// ExchangeContent represent the hashed content of ExchangeInputs data.
-type ExchangeContent struct {
-	Address            Hash     `json:"address"`
+// CEXContent represent the hashed content of CEXInputs data.
+type CEXContent struct {
 	TotalSwapVolume    *big.Int `json:"totalSwapVolume"`
 	SwapVolumeYear     *big.Int `json:"swapVolumeYear"`
 	SwapVolumeHalfYear *big.Int `json:"swapVolumeHalfYear"`
 }
 
 // Hash implements Content.
-func (u ExchangeContent) Hash() (Hash, error) {
+func (u CEXContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
 		// fields ordered alphabetically regarding their JSON key
-		u.Address.BigInt(),
 		u.SwapVolumeHalfYear,
 		u.SwapVolumeYear,
 		u.TotalSwapVolume,
@@ -100,7 +84,7 @@ func (u ExchangeContent) Hash() (Hash, error) {
 	return HashFromBigInt(hash), nil
 }
 
-// Standard implements Content. It always returns StandardExchange.
-func (u ExchangeContent) Standard() Standard {
-	return StandardExchange
+// Standard implements Content. It always returns StandardCEX.
+func (u CEXContent) Standard() Standard {
+	return StandardCEX
 }
