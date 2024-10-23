@@ -382,10 +382,10 @@ func decodeCertificateContent(
 		}
 
 		return content, nil
-	case StandardExchange:
-		var content ExchangeContent
+	case StandardDEX:
+		var content DEXContent
 		if err := json.Unmarshal(certificateContent, &content); err != nil {
-			return nil, fmt.Errorf("decode exchange certificate content json: %w", err)
+			return nil, fmt.Errorf("decode decentralized exchange certificate content json: %w", err)
 		}
 
 		return content, nil

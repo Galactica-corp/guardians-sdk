@@ -27,8 +27,8 @@ import (
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
-// ExchangeInputs represent the input data for verification of trading on an exchange.
-type ExchangeInputs struct {
+// DEXInputs represent the input data for verification of trading on a decentralized exchange.
+type DEXInputs struct {
 	Address            string          `json:"address" validate:"required,eth_addr"`
 	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume"`
 	SwapVolumeYear     decimal.Decimal `json:"swapVolumeYear"`
@@ -36,18 +36,18 @@ type ExchangeInputs struct {
 }
 
 // FFEncode implements FFEncoder.
-func (u *ExchangeInputs) FFEncode() (ExchangeContent, error) {
+func (u *DEXInputs) FFEncode() (DEXContent, error) {
 	addressBytes, err := hex.DecodeString(u.Address[2:])
 	if err != nil {
-		return ExchangeContent{}, fmt.Errorf("invalid address: %v", err)
+		return DEXContent{}, fmt.Errorf("invalid address: %v", err)
 	}
 
 	addressHash, err := poseidon.HashBytes(addressBytes)
 	if err != nil {
-		return ExchangeContent{}, fmt.Errorf("hash address: %v", err)
+		return DEXContent{}, fmt.Errorf("hash address: %v", err)
 	}
 
-	return ExchangeContent{
+	return DEXContent{
 		Address:            HashFromBigInt(addressHash),
 		TotalSwapVolume:    dollarsToCentsTruncated(u.TotalSwapVolume),
 		SwapVolumeYear:     dollarsToCentsTruncated(u.SwapVolumeYear),
@@ -55,29 +55,29 @@ func (u *ExchangeInputs) FFEncode() (ExchangeContent, error) {
 	}, nil
 }
 
-func (u *ExchangeInputs) Validate() error {
+func (u *DEXInputs) Validate() error {
 	return validation.Validate.Struct(u)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (u *ExchangeInputs) UnmarshalJSON(data []byte) error {
-	type Alias ExchangeInputs
+func (u *DEXInputs) UnmarshalJSON(data []byte) error {
+	type Alias DEXInputs
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*ExchangeInputs)(&alias).Validate(); err != nil {
+	if err := (*DEXInputs)(&alias).Validate(); err != nil {
 		return err
 	}
 
-	*u = ExchangeInputs(alias)
+	*u = DEXInputs(alias)
 	return nil
 }
 
-// ExchangeContent represent the hashed content of ExchangeInputs data.
-type ExchangeContent struct {
+// DEXContent represent the hashed content of DEXInputs data.
+type DEXContent struct {
 	Address            Hash     `json:"address"`
 	TotalSwapVolume    *big.Int `json:"totalSwapVolume"`
 	SwapVolumeYear     *big.Int `json:"swapVolumeYear"`
@@ -85,7 +85,7 @@ type ExchangeContent struct {
 }
 
 // Hash implements Content.
-func (u ExchangeContent) Hash() (Hash, error) {
+func (u DEXContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
 		// fields ordered alphabetically regarding their JSON key
 		u.Address.BigInt(),
@@ -100,7 +100,7 @@ func (u ExchangeContent) Hash() (Hash, error) {
 	return HashFromBigInt(hash), nil
 }
 
-// Standard implements Content. It always returns StandardExchange.
-func (u ExchangeContent) Standard() Standard {
-	return StandardExchange
+// Standard implements Content. It always returns StandardDEX.
+func (u DEXContent) Standard() Standard {
+	return StandardDEX
 }

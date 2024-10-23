@@ -222,8 +222,8 @@ func readCertificateContent(filePath string, standard zkcertificate.Standard) (z
 		}
 
 		return certificateContent, nil
-	case zkcertificate.StandardExchange:
-		var inputs zkcertificate.ExchangeInputs
+	case zkcertificate.StandardDEX:
+		var inputs zkcertificate.DEXInputs
 		if err := decodeJSONFile(filePath, &inputs); err != nil {
 			return nil, fmt.Errorf("read exchange inputs: %w", err)
 		}

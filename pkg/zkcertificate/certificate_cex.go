@@ -33,8 +33,8 @@ type CEXInputs struct {
 }
 
 // FFEncode implements FFEncoder.
-func (u *CEXInputs) FFEncode() (ExchangeContent, error) {
-	return ExchangeContent{
+func (u *CEXInputs) FFEncode() (CEXContent, error) {
+	return CEXContent{
 		TotalSwapVolume:    dollarsToCentsTruncated(u.TotalSwapVolume),
 		SwapVolumeYear:     dollarsToCentsTruncated(u.SwapVolumeYear),
 		SwapVolumeHalfYear: dollarsToCentsTruncated(u.SwapVolumeHalfYear),
