@@ -24,6 +24,11 @@ import (
 // Timestamp represents a type that holds a time.Time value that is serialized as Unix timestamp.
 type Timestamp time.Time
 
+// Time returns the Timestamp as [time.Time].
+func (t Timestamp) Time() time.Time {
+	return time.Time(t)
+}
+
 // Unix returns the Unix timestamp of the Timestamp.
 func (t Timestamp) Unix() int64 {
 	return time.Time(t).Unix()
