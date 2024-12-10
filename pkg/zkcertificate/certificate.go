@@ -396,6 +396,13 @@ func decodeCertificateContent(
 		}
 
 		return content, nil
+	case StandardTelegram:
+		var content TelegramContent
+		if err := json.Unmarshal(certificateContent, &content); err != nil {
+			return nil, fmt.Errorf("decode telegram certificate content json: %w", err)
+		}
+
+		return content, nil
 	default:
 		return nil, fmt.Errorf("unsupported certificate standard %s", certificateStandard)
 	}

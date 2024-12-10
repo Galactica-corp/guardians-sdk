@@ -246,6 +246,18 @@ func readCertificateContent(filePath string, standard zkcertificate.Standard) (z
 		}
 
 		return certificateContent, nil
+	case zkcertificate.StandardTelegram:
+		var inputs zkcertificate.TelegramInputs
+		if err := decodeJSONFile(filePath, &inputs); err != nil {
+			return nil, fmt.Errorf("read telegram inputs: %w", err)
+		}
+
+		certificateContent, err := inputs.FFEncode()
+		if err != nil {
+			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
+		}
+
+		return certificateContent, nil
 	default:
 		return nil, fmt.Errorf("standard %q is not supported", standard)
 	}

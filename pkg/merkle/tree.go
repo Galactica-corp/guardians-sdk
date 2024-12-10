@@ -19,9 +19,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/big"
 
 	"github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -134,4 +136,50 @@ func ConnectToMerkleProofService(merkleProofServiceHost string, useTLS bool) (me
 	}
 
 	return merkle.NewQueryClient(conn), nil
+}
+
+func Verify(proof Proof, root TreeNode) error {
+	res := proof.Leaf
+	index := proof.LeafIndex
+
+	for _, node := range proof.Path {
+		var err error
+		if index%2 == 0 {
+			res, err = computeNodeHash(res, node)
+		} else {
+			res, err = computeNodeHash(node, res)
+		}
+		if err != nil {
+			return fmt.Errorf("compute hash: %w", err)
+		}
+
+		index /= 2
+	}
+
+	resText, err := res.MarshalText()
+	if err != nil {
+		return fmt.Errorf("marshal proof: %w", err)
+	}
+
+	fmt.Println(string(resText))
+
+	if !res.Value.Eq(root.Value) {
+		return fmt.Errorf("root value not equal")
+	}
+
+	return nil
+}
+
+func computeNodeHash(left, right TreeNode) (TreeNode, error) {
+	val, err := poseidon.Hash([]*big.Int{left.Value.ToBig(), right.Value.ToBig()})
+	if err != nil {
+		return TreeNode{}, err
+	}
+
+	convertedVal, isOverflow := uint256.FromBig(val)
+	if isOverflow {
+		return TreeNode{}, fmt.Errorf("invalid hash")
+	}
+
+	return TreeNode{Value: convertedVal}, nil
 }
