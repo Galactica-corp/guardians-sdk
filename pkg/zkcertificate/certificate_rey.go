@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 
@@ -27,11 +28,11 @@ import (
 
 // REYInputs represents the input data for the REY verification.
 type REYInputs struct {
-	XID               string `json:"x_id" validate:"required,number"`
-	XUsername         string `json:"x_username" validate:"required,min=4,max=15"`
-	REYScoreAll       uint   `json:"rey_score_all"`
-	REYScoreGalactica uint   `json:"rey_score_galactica"`
-	REYFaction        uint   `json:"rey_faction"`
+	XID               string `json:"xID" validate:"required,number"`
+	XUsername         string `json:"xUsername" validate:"required,min=4,max=15"`
+	REYScoreAll       uint   `json:"reyScoreAll"`
+	REYScoreGalactica uint   `json:"reyScoreGalactica"`
+	REYFaction        uint   `json:"reyFaction"`
 }
 
 // FFEncode implements FFEncoder.
@@ -41,7 +42,7 @@ func (r *REYInputs) FFEncode() (REYContent, error) {
 		return REYContent{}, fmt.Errorf("hash xid: %w", err)
 	}
 
-	usernameHash, err := poseidon.HashBytes([]byte(r.XUsername))
+	usernameHash, err := poseidon.HashBytes([]byte(strings.ToLower(r.XUsername)))
 	if err != nil {
 		return REYContent{}, fmt.Errorf("hash username: %w", err)
 	}
@@ -78,11 +79,11 @@ func (r *REYInputs) UnmarshalJSON(data []byte) error {
 
 // REYContent represents the hashed content of REYInputs data.
 type REYContent struct {
-	XID               Hash `json:"x_id"`
-	XUsername         Hash `json:"x_username"`
-	REYScoreAll       uint `json:"rey_score_all"`
-	REYScoreGalactica uint `json:"rey_score_galactica"`
-	REYFaction        uint `json:"rey_faction"`
+	XID               Hash `json:"xID"`
+	XUsername         Hash `json:"xUsername"`
+	REYScoreAll       uint `json:"reyScoreAll"`
+	REYScoreGalactica uint `json:"reyScoreGalactica"`
+	REYFaction        uint `json:"reyFaction"`
 }
 
 // Hash implements Content.
