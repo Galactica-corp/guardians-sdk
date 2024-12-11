@@ -31,7 +31,7 @@ type TelegramInputs struct {
 	ActiveDaysCount                   uint      `json:"activeDaysCount" validate:"required"`
 	ContactWithAtLeast10MessagesCount uint      `json:"contactWithAtLeast10MessagesCount"`
 	CreatedAt                         time.Time `json:"createdAt" validate:"required,lt"`
-	MeanMonthlyMessageCount           uint      `json:"meanMonthlyMessageCount" validate:"required"`
+	MeanMonthlyMessageCount           uint      `json:"meanMonthlyMessageCount"`
 }
 
 // FFEncode implements FFEncoder.
