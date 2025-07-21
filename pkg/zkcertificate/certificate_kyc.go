@@ -22,9 +22,10 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // KYCContent represents the data for Know Your Customer (KYC) verification.
@@ -73,47 +74,47 @@ func (k KYCContent) Standard() Standard {
 
 // Hash implements Content.
 func (k KYCContent) Hash() (Hash, error) {
-	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
+	surnameHash, err := hashing.HashBytes([]byte(k.Surname))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash surname: %w", err)
 	}
 
-	forenameHash, err := poseidon.HashBytes([]byte(k.Forename))
+	forenameHash, err := hashing.HashBytes([]byte(k.Forename))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash forename: %w", err)
 	}
 
-	middleNameHash, err := poseidon.HashBytes([]byte(k.MiddleName))
+	middleNameHash, err := hashing.HashBytes([]byte(k.MiddleName))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash middle name: %w", err)
 	}
 
-	streetAndNumberHash, err := poseidon.HashBytes([]byte(k.StreetAndNumber))
+	streetAndNumberHash, err := hashing.HashBytes([]byte(k.StreetAndNumber))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash street and number: %w", err)
 	}
 
-	postcodeHash, err := poseidon.HashBytes([]byte(k.Postcode))
+	postcodeHash, err := hashing.HashBytes([]byte(k.Postcode))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash postcode: %w", err)
 	}
 
-	townHash, err := poseidon.HashBytes([]byte(k.Town))
+	townHash, err := hashing.HashBytes([]byte(k.Town))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash town: %w", err)
 	}
 
-	regionHash, err := poseidon.HashBytes([]byte(k.Region))
+	regionHash, err := hashing.HashBytes([]byte(k.Region))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash region: %w", err)
 	}
 
-	countryHash, err := poseidon.HashBytes([]byte(k.Country))
+	countryHash, err := hashing.HashBytes([]byte(k.Country))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash country: %w", err)
 	}
 
-	citizenshipHash, err := poseidon.HashBytes([]byte(k.Citizenship))
+	citizenshipHash, err := hashing.HashBytes([]byte(k.Citizenship))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash citizenship: %w", err)
 	}
@@ -143,22 +144,22 @@ func (k KYCContent) Hash() (Hash, error) {
 
 // IDHash computes and returns a user's ID hash for registration of the HumanID salt hash.
 func (k KYCContent) IDHash() (Hash, error) {
-	citizenshipHash, err := poseidon.HashBytes([]byte(k.Citizenship))
+	citizenshipHash, err := hashing.HashBytes([]byte(k.Citizenship))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash citizenship: %w", err)
 	}
 
-	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
+	surnameHash, err := hashing.HashBytes([]byte(k.Surname))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash surname: %w", err)
 	}
 
-	forenameHash, err := poseidon.HashBytes([]byte(k.Forename))
+	forenameHash, err := hashing.HashBytes([]byte(k.Forename))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash forename: %w", err)
 	}
 
-	middleNameHash, err := poseidon.HashBytes([]byte(k.MiddleName))
+	middleNameHash, err := hashing.HashBytes([]byte(k.MiddleName))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash middle name: %w", err)
 	}

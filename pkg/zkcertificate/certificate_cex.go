@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 	"github.com/shopspring/decimal"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"

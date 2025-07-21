@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/stretchr/testify/require"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"

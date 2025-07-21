@@ -21,10 +21,11 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 	"github.com/shopspring/decimal"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // DEXContent represent the data for verification of trading on a decentralized exchange.
@@ -58,7 +59,7 @@ func (x *DEXContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (x DEXContent) Hash() (Hash, error) {
-	addressHash, err := poseidon.HashBytes(x.Address.Bytes())
+	addressHash, err := hashing.HashBytes(x.Address.Bytes())
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash address: %v", err)
 	}

@@ -21,9 +21,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // REYContent represents the data for the REY verification.
@@ -58,12 +59,12 @@ func (r *REYContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (r REYContent) Hash() (Hash, error) {
-	idHash, err := poseidon.HashBytes([]byte(r.XID))
+	idHash, err := hashing.HashBytes([]byte(r.XID))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash xid: %w", err)
 	}
 
-	usernameHash, err := poseidon.HashBytes([]byte(strings.ToLower(r.XUsername)))
+	usernameHash, err := hashing.HashBytes([]byte(strings.ToLower(r.XUsername)))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash username: %w", err)
 	}

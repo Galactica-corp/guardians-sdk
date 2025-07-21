@@ -17,6 +17,7 @@ package zkcertificate
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -24,17 +25,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/iden3/go-iden3-crypto/utils"
+	"github.com/iden3/go-iden3-crypto/v2/babyjub"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/encryption"
 	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
 )
 
-var (
-	eddsaPrimeFieldMod = utils.NewIntFromString("2736030358979909402780800718157159386076813972158567259200215660948447373040")
-)
+var eddsaPrimeFieldMod, _ = new(big.Int).SetString("2736030358979909402780800718157159386076813972158567259200215660948447373040", 10)
 
 // Certificate represents a zero knowledge certificate structure that can hold different types of content.
 // It is parameterized by the type T for the content field.
@@ -208,7 +206,7 @@ func SignCertificate(
 		return nil, fmt.Errorf("hash message: %w", err)
 	}
 
-	return providerKey.SignPoseidon(message), nil
+	return providerKey.SignPoseidon(message)
 }
 
 // VerifySignature verifies the digital signature of a certificate using the provider's public key.
@@ -223,7 +221,15 @@ func VerifySignature(
 		return false, fmt.Errorf("hash message: %w", err)
 	}
 
-	return providerKey.VerifyPoseidon(message, signature), nil
+	if err := providerKey.VerifyPoseidon(message, signature); err != nil {
+		if errors.Is(err, babyjub.ErrVerifyPoseidonFailed) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }
 
 // LeafHash computes the hash of a certificate's components and additional data to create a leaf hash.

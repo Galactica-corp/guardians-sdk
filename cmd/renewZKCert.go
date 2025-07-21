@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"

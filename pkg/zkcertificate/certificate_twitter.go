@@ -22,9 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // TwitterContent represents the data for X/Twitter verification.
@@ -62,12 +63,12 @@ func (t *TwitterContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (t TwitterContent) Hash() (Hash, error) {
-	idHash, err := poseidon.HashBytes([]byte(t.ID))
+	idHash, err := hashing.HashBytes([]byte(t.ID))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash ID: %w", err)
 	}
 
-	usernameHash, err := poseidon.HashBytes([]byte(strings.ToLower(t.Username)))
+	usernameHash, err := hashing.HashBytes([]byte(strings.ToLower(t.Username)))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash username: %w", err)
 	}

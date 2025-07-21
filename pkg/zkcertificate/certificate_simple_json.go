@@ -21,7 +21,9 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
+
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // SimpleJSON represents the input data for data that consists of
@@ -61,7 +63,7 @@ func (c SimpleJSON) Hash() (Hash, error) {
 	for i, key := range keys {
 		value := c[key]
 
-		hash, err := poseidon.HashBytes([]byte(value))
+		hash, err := hashing.HashBytes([]byte(value))
 		if err != nil {
 			return Hash{}, fmt.Errorf("hash field %s: %w", key, err)
 		}

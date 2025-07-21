@@ -23,7 +23,7 @@ import (
 
 	"github.com/Galactica-corp/merkle-proof-service/gen/galactica/merkle"
 	"github.com/holiman/uint256"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -127,7 +127,7 @@ func ConnectToMerkleProofService(merkleProofServiceHost string, useTLS bool) (me
 		creds = insecure.NewCredentials()
 	}
 
-	conn, err := grpc.Dial(
+	conn, err := grpc.NewClient(
 		merkleProofServiceHost,
 		grpc.WithTransportCredentials(creds),
 	)
