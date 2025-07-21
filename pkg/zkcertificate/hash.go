@@ -19,13 +19,13 @@ import (
 	"math/big"
 )
 
-// Hash represents a cryptographic hash value obtained by Poseidon algorithm.
+// Hash represents a cryptographic hash value obtained by the Poseidon algorithm.
 type Hash big.Int
 
 // HashFromBigInt creates a Hash from a given big.Int value.
 func HashFromBigInt(n *big.Int) Hash {
 	if n == nil {
-		n = big.NewInt(1)
+		n = EmptySequenceHash
 	}
 
 	return Hash(*n)
@@ -65,3 +65,6 @@ func (h *Hash) UnmarshalText(text []byte) error {
 func (h Hash) MarshalText() (text []byte, err error) {
 	return h.BigInt().MarshalText()
 }
+
+// EmptySequenceHash represents the predefined hash value for an empty sequence.
+var EmptySequenceHash = big.NewInt(1)

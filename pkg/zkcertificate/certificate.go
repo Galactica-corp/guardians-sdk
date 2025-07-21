@@ -259,12 +259,6 @@ func DID(standard Standard, leafHash Hash) string {
 	return fmt.Sprintf("did:%s:%s", standard, leafHash)
 }
 
-// FFEncoder is an interface for objects that can perform encoding to Finite Field (FF).
-type FFEncoder[T Content] interface {
-	// FFEncode performs Finite Field (FF) encoding and returns the result that can be used as certificate content.
-	FFEncode() (T, error)
-}
-
 // EncryptedCertificate is a Certificate that has been encrypted.
 type EncryptedCertificate struct {
 	encryption.EncryptedMessage `json:",inline"`
@@ -362,7 +356,7 @@ func decodeCertificateContent(
 
 		return content, nil
 	case StandardSimpleJSON:
-		var content SimpleJSONContent
+		var content SimpleJSON
 		if err := json.Unmarshal(certificateContent, &content); err != nil {
 			return nil, fmt.Errorf("decode kyc certificate content json: %w", err)
 		}

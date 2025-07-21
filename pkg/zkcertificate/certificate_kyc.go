@@ -16,6 +16,7 @@
 package zkcertificate
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -26,12 +27,12 @@ import (
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
-// KYCInputs represents the input data for Know Your Customer (KYC) verification.
+// KYCContent represents the data for Know Your Customer (KYC) verification.
 // It contains various fields required for identity verification and validation.
-type KYCInputs struct {
+type KYCContent struct {
 	Surname           string               `json:"surname" validate:"required"`
 	Forename          string               `json:"forename" validate:"required"`
-	MiddleName        string               `json:"middlename" validate:"omitempty"`
+	MiddleName        string               `json:"middlename"`
 	YearOfBirth       uint16               `json:"yearOfBirth" validate:"required"`
 	MonthOfBirth      uint8                `json:"monthOfBirth" validate:"required,gte=1,lte=12"`
 	DayOfBirth        uint8                `json:"dayOfBirth" validate:"required,gte=1,lte=31"`
@@ -44,137 +45,136 @@ type KYCInputs struct {
 	Country           string               `json:"country" validate:"required,iso3166_1_alpha3"`
 }
 
-// FFEncode implements FFEncoder.
-func (k KYCInputs) FFEncode() (KYCContent, error) {
-	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash surname: %w", err)
-	}
-
-	forenameHash, err := poseidon.HashBytes([]byte(k.Forename))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash forename: %w", err)
-	}
-
-	middleNameHash, err := poseidon.HashBytes([]byte(k.MiddleName))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash middle name: %w", err)
-	}
-
-	streetAndNumberHash, err := poseidon.HashBytes([]byte(k.StreetAndNumber))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash street and number: %w", err)
-	}
-
-	postcodeHash, err := poseidon.HashBytes([]byte(k.Postcode))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash postcode: %w", err)
-	}
-
-	townHash, err := poseidon.HashBytes([]byte(k.Town))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash town: %w", err)
-	}
-
-	regionHash, err := poseidon.HashBytes([]byte(k.Region))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash region: %w", err)
-	}
-
-	countryHash, err := poseidon.HashBytes([]byte(k.Country))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash country: %w", err)
-	}
-
-	citizenshipHash, err := poseidon.HashBytes([]byte(k.Citizenship))
-	if err != nil {
-		return KYCContent{}, fmt.Errorf("hash citizenship: %w", err)
-	}
-
-	return KYCContent{
-		Surname:           HashFromBigInt(surnameHash),
-		Forename:          HashFromBigInt(forenameHash),
-		MiddleName:        HashFromBigInt(middleNameHash),
-		YearOfBirth:       k.YearOfBirth,
-		MonthOfBirth:      k.MonthOfBirth,
-		DayOfBirth:        k.DayOfBirth,
-		VerificationLevel: k.VerificationLevel,
-		StreetAndNumber:   HashFromBigInt(streetAndNumberHash),
-		Postcode:          HashFromBigInt(postcodeHash),
-		Town:              HashFromBigInt(townHash),
-		Region:            HashFromBigInt(regionHash),
-		Country:           HashFromBigInt(countryHash),
-		Citizenship:       HashFromBigInt(citizenshipHash),
-	}, nil
-}
-
-// Validate performs validation on the KYCInputs instance using the struct tags specified
-// for field validation. It checks that the fields of the KYCInputs struct adhere to
-// the defined validation rules.
-func (k *KYCInputs) Validate() error {
+func (k *KYCContent) Validate() error {
 	return validation.Validate.Struct(k)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (k *KYCInputs) UnmarshalJSON(data []byte) error {
-	type Alias KYCInputs
+func (k *KYCContent) UnmarshalJSON(data []byte) error {
+	type Alias KYCContent
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*KYCInputs)(&alias).Validate(); err != nil {
+	if err := (*KYCContent)(&alias).Validate(); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	*k = KYCInputs(alias)
+	*k = KYCContent(alias)
 	return nil
 }
 
-// KYCContent represents the hashed content of KYC (Know Your Customer) data.
-// It contains hashed values for various fields related to identity and verification.
-type KYCContent struct {
-	Surname           Hash                 `json:"surname"`
-	Forename          Hash                 `json:"forename"`
-	MiddleName        Hash                 `json:"middlename"`
-	YearOfBirth       uint16               `json:"yearOfBirth"`
-	MonthOfBirth      uint8                `json:"monthOfBirth"`
-	DayOfBirth        uint8                `json:"dayOfBirth"`
-	VerificationLevel KYCVerificationLevel `json:"verificationLevel"`
-	StreetAndNumber   Hash                 `json:"streetAndNumber"`
-	Postcode          Hash                 `json:"postcode"`
-	Town              Hash                 `json:"town"`
-	Region            Hash                 `json:"region"`
-	Country           Hash                 `json:"country"`
-	Citizenship       Hash                 `json:"citizenship"`
-}
-
 // Standard returns the standard associated with the KYCContent, which is StandardKYC.
-func (c KYCContent) Standard() Standard {
+func (k KYCContent) Standard() Standard {
 	return StandardKYC
 }
 
-// Hash computes and returns the hash of the KYCContent instance.
-func (c KYCContent) Hash() (Hash, error) {
+// Hash implements Content.
+func (k KYCContent) Hash() (Hash, error) {
+	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash surname: %w", err)
+	}
+
+	forenameHash, err := poseidon.HashBytes([]byte(k.Forename))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash forename: %w", err)
+	}
+
+	middleNameHash, err := poseidon.HashBytes([]byte(k.MiddleName))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash middle name: %w", err)
+	}
+
+	streetAndNumberHash, err := poseidon.HashBytes([]byte(k.StreetAndNumber))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash street and number: %w", err)
+	}
+
+	postcodeHash, err := poseidon.HashBytes([]byte(k.Postcode))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash postcode: %w", err)
+	}
+
+	townHash, err := poseidon.HashBytes([]byte(k.Town))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash town: %w", err)
+	}
+
+	regionHash, err := poseidon.HashBytes([]byte(k.Region))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash region: %w", err)
+	}
+
+	countryHash, err := poseidon.HashBytes([]byte(k.Country))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash country: %w", err)
+	}
+
+	citizenshipHash, err := poseidon.HashBytes([]byte(k.Citizenship))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash citizenship: %w", err)
+	}
+
 	hash, err := poseidon.Hash([]*big.Int{
 		// fields ordered alphabetically regarding their JSON key
-		c.Citizenship.BigInt(),
-		c.Country.BigInt(),
-		big.NewInt(int64(c.DayOfBirth)),
-		c.Forename.BigInt(),
-		c.MiddleName.BigInt(),
-		big.NewInt(int64(c.MonthOfBirth)),
-		c.Postcode.BigInt(),
-		c.Region.BigInt(),
-		c.StreetAndNumber.BigInt(),
-		c.Surname.BigInt(),
-		c.Town.BigInt(),
-		big.NewInt(int64(c.VerificationLevel)),
-		big.NewInt(int64(c.YearOfBirth)),
+		citizenshipHash,
+		countryHash,
+		big.NewInt(int64(k.DayOfBirth)),
+		forenameHash,
+		cmp.Or(middleNameHash, EmptySequenceHash),
+		big.NewInt(int64(k.MonthOfBirth)),
+		cmp.Or(postcodeHash, EmptySequenceHash),
+		cmp.Or(regionHash, EmptySequenceHash),
+		cmp.Or(streetAndNumberHash, EmptySequenceHash),
+		surnameHash,
+		cmp.Or(townHash, EmptySequenceHash),
+		big.NewInt(int64(k.VerificationLevel)),
+		big.NewInt(int64(k.YearOfBirth)),
 	})
 	if err != nil {
 		return Hash{}, err
+	}
+
+	return HashFromBigInt(hash), nil
+}
+
+// IDHash computes and returns a user's ID hash for registration of the HumanID salt hash.
+func (k KYCContent) IDHash() (Hash, error) {
+	citizenshipHash, err := poseidon.HashBytes([]byte(k.Citizenship))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash citizenship: %w", err)
+	}
+
+	surnameHash, err := poseidon.HashBytes([]byte(k.Surname))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash surname: %w", err)
+	}
+
+	forenameHash, err := poseidon.HashBytes([]byte(k.Forename))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash forename: %w", err)
+	}
+
+	middleNameHash, err := poseidon.HashBytes([]byte(k.MiddleName))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash middle name: %w", err)
+	}
+
+	hash, err := poseidon.Hash([]*big.Int{
+		// fields ordered alphabetically regarding their JSON key
+		citizenshipHash,
+		big.NewInt(int64(k.DayOfBirth)),
+		forenameHash,
+		cmp.Or(middleNameHash, EmptySequenceHash),
+		big.NewInt(int64(k.MonthOfBirth)),
+		surnameHash,
+		big.NewInt(int64(k.YearOfBirth)),
+	})
+	if err != nil {
+		return Hash{}, fmt.Errorf("compute id hash: %w", err)
 	}
 
 	return HashFromBigInt(hash), nil
@@ -203,23 +203,4 @@ func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
 // MarshalText implements [encoding.TextMarshaler].
 func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
 	return []byte(strconv.Itoa(int(v))), nil
-}
-
-// IDHash computes and returns a user's ID hash for registration of the HumanID salt hash.
-func (c *KYCContent) IDHash() (Hash, error) {
-	hash, err := poseidon.Hash([]*big.Int{
-		// fields ordered alphabetically regarding their JSON key
-		c.Citizenship.BigInt(),
-		big.NewInt(int64(c.DayOfBirth)),
-		c.Forename.BigInt(),
-		c.MiddleName.BigInt(),
-		big.NewInt(int64(c.MonthOfBirth)),
-		c.Surname.BigInt(),
-		big.NewInt(int64(c.YearOfBirth)),
-	})
-	if err != nil {
-		return Hash{}, fmt.Errorf("compute id hash: %w", err)
-	}
-
-	return HashFromBigInt(hash), nil
 }
