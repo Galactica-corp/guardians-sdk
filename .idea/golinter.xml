@@ -26,7 +26,6 @@
         <option value="prealloc" />
       </list>
     </option>
-    <option name="goLinterExe" value="/usr/local/bin/golangci-lint" />
     <option name="linterSelected" value="true" />
   </component>
 </project>
