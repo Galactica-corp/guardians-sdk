@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ type CEXContent struct {
 	SwapVolumeHalfYear decimal.Decimal `json:"swapVolumeHalfYear"`
 }
 
-func (x *CEXContent) Validate() error {
+func (x CEXContent) Validate() error {
 	return validation.Validate.Struct(x)
 }
 

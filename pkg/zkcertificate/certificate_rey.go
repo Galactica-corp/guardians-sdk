@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ type REYContent struct {
 	REYFaction        uint   `json:"reyFaction"`
 }
 
-func (r *REYContent) Validate() error {
+func (r REYContent) Validate() error {
 	return validation.Validate.Struct(r)
 }
 

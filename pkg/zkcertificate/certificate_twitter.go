@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ type TwitterContent struct {
 	Verified       bool      `json:"verified"`
 }
 
-func (t *TwitterContent) Validate() error {
+func (t TwitterContent) Validate() error {
 	return validation.Validate.Struct(t)
 }
 

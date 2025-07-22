@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ type KYCContent struct {
 	Country           string               `json:"country" validate:"required,iso3166_1_alpha3"`
 }
 
-func (k *KYCContent) Validate() error {
+func (k KYCContent) Validate() error {
 	return validation.Validate.Struct(k)
 }
 
