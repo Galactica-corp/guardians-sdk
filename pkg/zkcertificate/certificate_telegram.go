@@ -34,8 +34,8 @@ type TelegramContent struct {
 	MeanMonthlyMessageCount           uint      `json:"meanMonthlyMessageCount"`
 }
 
-func (t *TelegramContent) Validate() error {
-	return validation.Validate.Struct(&t)
+func (t TelegramContent) Validate() error {
+	return validation.Validate.Struct(t)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
