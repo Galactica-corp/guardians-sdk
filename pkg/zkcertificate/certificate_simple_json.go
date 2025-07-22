@@ -42,7 +42,7 @@ func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*c = SimpleJSON(tempMap)
+	*c = tempMap
 	return nil
 }
 
