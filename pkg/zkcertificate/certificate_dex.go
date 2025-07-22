@@ -30,8 +30,8 @@ import (
 
 // DEXContent represent the data for verification of trading on a decentralized exchange.
 type DEXContent struct {
-	Address            common.Address  `json:"address"`
-	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume"`
+	Address            common.Address  `json:"address" validate:"required"`
+	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume" validate:"required,decimal_gt_0"`
 	SwapVolumeYear     decimal.Decimal `json:"swapVolumeYear"`
 	SwapVolumeHalfYear decimal.Decimal `json:"swapVolumeHalfYear"`
 }
