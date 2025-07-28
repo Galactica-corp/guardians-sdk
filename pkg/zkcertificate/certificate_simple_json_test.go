@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ func TestSimpleJSON_Validate(t *testing.T) {
 	require.NoError(t, simpleJSON.Validate())
 }
 
-func TestSimpleJSON_FFEncode(t *testing.T) {
+func TestSimpleJSONContent_Hash(t *testing.T) {
 	simpleJSON := zkcertificate.SimpleJSON{
 		"name":      "John Doe",
 		"age":       "30",
@@ -45,28 +45,7 @@ func TestSimpleJSON_FFEncode(t *testing.T) {
 		"birthday":  "1990-01-01T00:00:00Z",
 	}
 
-	content, err := simpleJSON.FFEncode()
-	require.NoError(t, err)
-
-	require.Equal(t, zkcertificate.SimpleJSONContent{
-		mustHashFromString("15354103676486910392335921695264068620680648317671388604584937927146958457868"),
-		mustHashFromString("15224306929871956365071811469757107548610844039491110436456644707663745462126"),
-		mustHashFromString("10390072210063895581917865108194000409658292591398372775041595820377437637311"),
-		mustHashFromString("13428808271822965993111337918515956004850801358226726664783893758011128965986"),
-		mustHashFromString("1375746358235177439421528943531890815720286426595868754203705803877498795804"),
-	}, content)
-}
-
-func TestSimpleJSONContent_Hash(t *testing.T) {
-	simpleJSONContent := zkcertificate.SimpleJSONContent{
-		mustHashFromString("15354103676486910392335921695264068620680648317671388604584937927146958457868"),
-		mustHashFromString("15224306929871956365071811469757107548610844039491110436456644707663745462126"),
-		mustHashFromString("10390072210063895581917865108194000409658292591398372775041595820377437637311"),
-		mustHashFromString("13428808271822965993111337918515956004850801358226726664783893758011128965986"),
-		mustHashFromString("1375746358235177439421528943531890815720286426595868754203705803877498795804"),
-	}
-
-	hash, err := simpleJSONContent.Hash()
+	hash, err := simpleJSON.Hash()
 	require.NoError(t, err)
 	require.Equal(t, "8797979680535626597025031675791027936583836473963438577360708138820501712641", hash.String())
 }
@@ -124,7 +103,7 @@ func TestSimpleJSON_UnmarshalJSON_InvalidStructure(t *testing.T) {
 }
 
 func TestSimpleJSONContent_Standard(t *testing.T) {
-	content := zkcertificate.SimpleJSONContent{}
+	content := zkcertificate.SimpleJSON{}
 
 	standard := content.Standard()
 

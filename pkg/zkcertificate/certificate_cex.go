@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,63 +19,47 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 	"github.com/shopspring/decimal"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
-// CEXInputs represent the input data for verification of trading on a centralized exchange.
-type CEXInputs struct {
+// CEXContent represent the data for verification of trading on a centralized exchange.
+type CEXContent struct {
 	TotalSwapVolume    decimal.Decimal `json:"totalSwapVolume" validate:"required,decimal_gt_0"`
 	SwapVolumeYear     decimal.Decimal `json:"swapVolumeYear"`
 	SwapVolumeHalfYear decimal.Decimal `json:"swapVolumeHalfYear"`
 }
 
-// FFEncode implements FFEncoder.
-func (u *CEXInputs) FFEncode() (CEXContent, error) {
-	return CEXContent{
-		TotalSwapVolume:    dollarsToCentsTruncated(u.TotalSwapVolume),
-		SwapVolumeYear:     dollarsToCentsTruncated(u.SwapVolumeYear),
-		SwapVolumeHalfYear: dollarsToCentsTruncated(u.SwapVolumeHalfYear),
-	}, nil
-}
-
-func (u *CEXInputs) Validate() error {
-	return validation.Validate.Struct(u)
+func (x CEXContent) Validate() error {
+	return validation.Validate.Struct(x)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (u *CEXInputs) UnmarshalJSON(data []byte) error {
-	type Alias CEXInputs
+func (x *CEXContent) UnmarshalJSON(data []byte) error {
+	type Alias CEXContent
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*CEXInputs)(&alias).Validate(); err != nil {
+	if err := (*CEXContent)(&alias).Validate(); err != nil {
 		return err
 	}
 
-	*u = CEXInputs(alias)
+	*x = CEXContent(alias)
 	return nil
 }
 
-// CEXContent represent the hashed content of CEXInputs data.
-type CEXContent struct {
-	TotalSwapVolume    *big.Int `json:"totalSwapVolume"`
-	SwapVolumeYear     *big.Int `json:"swapVolumeYear"`
-	SwapVolumeHalfYear *big.Int `json:"swapVolumeHalfYear"`
-}
-
 // Hash implements Content.
-func (u CEXContent) Hash() (Hash, error) {
+func (x CEXContent) Hash() (Hash, error) {
 	hash, err := poseidon.Hash([]*big.Int{
 		// fields ordered alphabetically regarding their JSON key
-		u.SwapVolumeHalfYear,
-		u.SwapVolumeYear,
-		u.TotalSwapVolume,
+		dollarsToCentsTruncated(x.SwapVolumeHalfYear),
+		dollarsToCentsTruncated(x.SwapVolumeYear),
+		dollarsToCentsTruncated(x.TotalSwapVolume),
 	})
 	if err != nil {
 		return Hash{}, err
@@ -85,6 +69,6 @@ func (u CEXContent) Hash() (Hash, error) {
 }
 
 // Standard implements Content. It always returns StandardCEX.
-func (u CEXContent) Standard() Standard {
+func (x CEXContent) Standard() Standard {
 	return StandardCEX
 }

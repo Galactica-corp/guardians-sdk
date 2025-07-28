@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,13 +21,14 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
-// REYInputs represents the input data for the REY verification.
-type REYInputs struct {
+// REYContent represents the data for the REY verification.
+type REYContent struct {
 	XID               string `json:"xID" validate:"required,number"`
 	XUsername         string `json:"xUsername" validate:"required,min=4,max=15"`
 	REYScoreAll       uint   `json:"reyScoreAll"`
@@ -35,66 +36,46 @@ type REYInputs struct {
 	REYFaction        uint   `json:"reyFaction"`
 }
 
-// FFEncode implements FFEncoder.
-func (r *REYInputs) FFEncode() (REYContent, error) {
-	idHash, err := poseidon.HashBytes([]byte(r.XID))
-	if err != nil {
-		return REYContent{}, fmt.Errorf("hash xid: %w", err)
-	}
-
-	usernameHash, err := poseidon.HashBytes([]byte(strings.ToLower(r.XUsername)))
-	if err != nil {
-		return REYContent{}, fmt.Errorf("hash username: %w", err)
-	}
-
-	return REYContent{
-		XID:               HashFromBigInt(idHash),
-		XUsername:         HashFromBigInt(usernameHash),
-		REYScoreAll:       r.REYScoreAll,
-		REYScoreGalactica: r.REYScoreGalactica,
-		REYFaction:        r.REYFaction,
-	}, nil
-}
-
-func (r *REYInputs) Validate() error {
+func (r REYContent) Validate() error {
 	return validation.Validate.Struct(r)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (r *REYInputs) UnmarshalJSON(data []byte) error {
-	type Alias REYInputs
+func (r *REYContent) UnmarshalJSON(data []byte) error {
+	type Alias REYContent
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*REYInputs)(&alias).Validate(); err != nil {
+	if err := (*REYContent)(&alias).Validate(); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	*r = REYInputs(alias)
+	*r = REYContent(alias)
 	return nil
 }
 
-// REYContent represents the hashed content of REYInputs data.
-type REYContent struct {
-	XID               Hash `json:"xID"`
-	XUsername         Hash `json:"xUsername"`
-	REYScoreAll       uint `json:"reyScoreAll"`
-	REYScoreGalactica uint `json:"reyScoreGalactica"`
-	REYFaction        uint `json:"reyFaction"`
-}
-
 // Hash implements Content.
-func (c REYContent) Hash() (Hash, error) {
+func (r REYContent) Hash() (Hash, error) {
+	idHash, err := hashing.HashBytes([]byte(r.XID))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash xid: %w", err)
+	}
+
+	usernameHash, err := hashing.HashBytes([]byte(strings.ToLower(r.XUsername)))
+	if err != nil {
+		return Hash{}, fmt.Errorf("hash username: %w", err)
+	}
+
 	hash, err := poseidon.Hash([]*big.Int{
 		// fields ordered alphabetically regarding their JSON key
-		new(big.Int).SetUint64(uint64(c.REYFaction)),
-		new(big.Int).SetUint64(uint64(c.REYScoreAll)),
-		new(big.Int).SetUint64(uint64(c.REYScoreGalactica)),
-		c.XID.BigInt(),
-		c.XUsername.BigInt(),
+		new(big.Int).SetUint64(uint64(r.REYFaction)),
+		new(big.Int).SetUint64(uint64(r.REYScoreAll)),
+		new(big.Int).SetUint64(uint64(r.REYScoreGalactica)),
+		idHash,
+		usernameHash,
 	})
 	if err != nil {
 		return Hash{}, err
@@ -104,6 +85,6 @@ func (c REYContent) Hash() (Hash, error) {
 }
 
 // Standard implements Content. It always returns StandardREY.
-func (c REYContent) Standard() Standard {
+func (r REYContent) Standard() Standard {
 	return StandardREY
 }

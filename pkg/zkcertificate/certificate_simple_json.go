@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,35 +21,14 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
+
+	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
 )
 
 // SimpleJSON represents the input data for data that consists of
 // simple JSON fields: strings only.
 type SimpleJSON map[string]string
-
-// FFEncode implements FFEncoder.
-func (c SimpleJSON) FFEncode() (SimpleJSONContent, error) {
-	keys := make([]string, 0, len(c))
-	for key := range c {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	hashedContent := make(SimpleJSONContent, len(c))
-
-	for i, key := range keys {
-		value := c[key]
-
-		hash, err := poseidon.HashBytes([]byte(value))
-		if err != nil {
-			return nil, fmt.Errorf("hash field %s: %w", key, err)
-		}
-		hashedContent[i] = HashFromBigInt(hash)
-	}
-
-	return hashedContent, nil
-}
 
 // Validate performs validation on the SimpleJSON instance.
 func (c *SimpleJSON) Validate() error {
@@ -63,27 +42,36 @@ func (c *SimpleJSON) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*c = SimpleJSON(tempMap)
+	*c = tempMap
 	return nil
 }
 
-// SimpleJSONContent represents the hashed content of SimpleJSON data.
-// It ordered by the SimpleJSON data key's natural order.
-type SimpleJSONContent []Hash
-
 // Standard returns the standard associated with the SimpleJSONContent, which is StandardSimpleJSON.
-func (c SimpleJSONContent) Standard() Standard {
+func (c SimpleJSON) Standard() Standard {
 	return StandardSimpleJSON
 }
 
-// Hash computes and returns the hash of the SimpleJSONContent instance.
-func (c SimpleJSONContent) Hash() (Hash, error) {
-	hashInputs := make([]*big.Int, len(c))
-	for i, hash := range c {
-		hashInputs[i] = hash.BigInt()
+// Hash computes and returns the hash of the SimpleJSON instance.
+func (c SimpleJSON) Hash() (Hash, error) {
+	keys := make([]string, 0, len(c))
+	for key := range c {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	hashedContent := make([]*big.Int, len(c))
+	for i, key := range keys {
+		value := c[key]
+
+		hash, err := hashing.HashBytes([]byte(value))
+		if err != nil {
+			return Hash{}, fmt.Errorf("hash field %s: %w", key, err)
+		}
+
+		hashedContent[i] = hash
 	}
 
-	hash, err := poseidon.Hash(hashInputs)
+	hash, err := poseidon.Hash(hashedContent)
 	if err != nil {
 		return Hash{}, err
 	}

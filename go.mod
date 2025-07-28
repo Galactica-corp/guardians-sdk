@@ -7,7 +7,7 @@ require (
 	github.com/ethereum/go-ethereum v1.16.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/holiman/uint256 v1.3.2
-	github.com/iden3/go-iden3-crypto v0.0.17
+	github.com/iden3/go-iden3-crypto/v2 v2.0.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0

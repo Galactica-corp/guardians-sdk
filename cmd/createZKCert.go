@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"
@@ -175,89 +175,54 @@ func CreateZKCert[T zkcertificate.Content](
 func readCertificateContent(filePath string, standard zkcertificate.Standard) (zkcertificate.Content, error) {
 	switch standard {
 	case zkcertificate.StandardKYC:
-		var inputs zkcertificate.KYCInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read kyc inputs: %w", err)
+		var content zkcertificate.KYCContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read kyc content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardSimpleJSON:
-		var inputs zkcertificate.SimpleJSON
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
+		var content zkcertificate.SimpleJSON
+		if err := decodeJSONFile(filePath, &content); err != nil {
 			return nil, fmt.Errorf("read simple json: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardTwitter:
-		var inputs zkcertificate.TwitterInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read twitter inputs: %w", err)
+		var content zkcertificate.TwitterContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read twitter content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardREY:
-		var inputs zkcertificate.REYInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read rey inputs: %w", err)
+		var content zkcertificate.REYContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read rey content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardDEX:
-		var inputs zkcertificate.DEXInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read exchange inputs: %w", err)
+		var content zkcertificate.DEXContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read exchange content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardCEX:
-		var inputs zkcertificate.CEXInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read centralized exchange inputs: %w", err)
+		var content zkcertificate.CEXContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read centralized exchange content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	case zkcertificate.StandardTelegram:
-		var inputs zkcertificate.TelegramInputs
-		if err := decodeJSONFile(filePath, &inputs); err != nil {
-			return nil, fmt.Errorf("read telegram inputs: %w", err)
+		var content zkcertificate.TelegramContent
+		if err := decodeJSONFile(filePath, &content); err != nil {
+			return nil, fmt.Errorf("read telegram content: %w", err)
 		}
 
-		certificateContent, err := inputs.FFEncode()
-		if err != nil {
-			return nil, fmt.Errorf("encode inputs to finite field: %w", err)
-		}
-
-		return certificateContent, nil
+		return content, nil
 	default:
 		return nil, fmt.Errorf("standard %q is not supported", standard)
 	}

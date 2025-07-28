@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,56 +21,38 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
 	"github.com/galactica-corp/guardians-sdk/internal/validation"
 )
 
-// TelegramInputs represents the input data for verification of Telegram account.
-type TelegramInputs struct {
+// TelegramContent represents the data for verification of a Telegram account.
+type TelegramContent struct {
 	ActiveDaysCount                   uint      `json:"activeDaysCount" validate:"required"`
 	ContactWithAtLeast10MessagesCount uint      `json:"contactWithAtLeast10MessagesCount"`
 	CreatedAt                         time.Time `json:"createdAt" validate:"required,lt"`
 	MeanMonthlyMessageCount           uint      `json:"meanMonthlyMessageCount"`
 }
 
-// FFEncode implements FFEncoder.
-func (t TelegramInputs) FFEncode() (TelegramContent, error) {
-	return TelegramContent{
-		ActiveDaysCount:                   t.ActiveDaysCount,
-		ContactWithAtLeast10MessagesCount: t.ContactWithAtLeast10MessagesCount,
-		CreatedAt:                         t.CreatedAt.Unix(),
-		MeanMonthlyMessageCount:           t.MeanMonthlyMessageCount,
-	}, nil
-}
-
-func (t *TelegramInputs) Validate() error {
-	return validation.Validate.Struct(&t)
+func (t TelegramContent) Validate() error {
+	return validation.Validate.Struct(t)
 }
 
 // UnmarshalJSON implements [json.Unmarshaler].
-func (t *TelegramInputs) UnmarshalJSON(data []byte) error {
-	type Alias TelegramInputs
+func (t *TelegramContent) UnmarshalJSON(data []byte) error {
+	type Alias TelegramContent
 
 	var alias Alias
 	if err := json.Unmarshal(data, &alias); err != nil {
 		return err
 	}
 
-	if err := (*TelegramInputs)(&alias).Validate(); err != nil {
+	if err := (*TelegramContent)(&alias).Validate(); err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
 
-	*t = TelegramInputs(alias)
+	*t = TelegramContent(alias)
 	return nil
-}
-
-// TelegramContent represents the hashed content of TelegramInputs data.
-type TelegramContent struct {
-	ActiveDaysCount                   uint  `json:"activeDaysCount"`
-	ContactWithAtLeast10MessagesCount uint  `json:"contactWithAtLeast10MessagesCount"`
-	CreatedAt                         int64 `json:"createdAt"`
-	MeanMonthlyMessageCount           uint  `json:"meanMonthlyMessageCount"`
 }
 
 // Hash implements Content.
@@ -79,7 +61,7 @@ func (t TelegramContent) Hash() (Hash, error) {
 		// fields ordered alphabetically regarding their JSON key
 		new(big.Int).SetUint64(uint64(t.ActiveDaysCount)),
 		new(big.Int).SetUint64(uint64(t.ContactWithAtLeast10MessagesCount)),
-		big.NewInt(t.CreatedAt),
+		big.NewInt(t.CreatedAt.Unix()),
 		new(big.Int).SetUint64(uint64(t.MeanMonthlyMessageCount)),
 	})
 	if err != nil {
