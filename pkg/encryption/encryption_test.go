@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/nacl/box"
 
 	"github.com/galactica-corp/guardians-sdk/pkg/encryption"
 )
@@ -44,6 +45,10 @@ func TestEncryptWithPadding(t *testing.T) {
 		{
 			name:    "More than 2048 bytes",
 			message: strings.Repeat("A", 3000),
+		},
+		{
+			name:    "Less than 2048 bytes by at most box.Overhead",
+			message: strings.Repeat("A", 2048-len(`{"data":"","padding":""}`)-box.Overhead/2),
 		},
 	}
 

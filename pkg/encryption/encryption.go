@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -56,8 +56,8 @@ func EncryptWithPadding(encryptionKey [32]byte, message any) (EncryptedMessage, 
 	}
 
 	padLength := 0
-	if m := len(data) % defaultPaddingLength; m > 0 {
-		padLength = defaultPaddingLength - m - box.Overhead
+	if m := (len(data) + box.Overhead) % defaultPaddingLength; m > 0 {
+		padLength = defaultPaddingLength - m
 	}
 
 	data, err = json.Marshal(dataWithPadding{
