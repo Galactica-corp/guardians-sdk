@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/nacl/box"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/encryption"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/encryption"
 )
 
 func TestEncryptWithPadding(t *testing.T) {

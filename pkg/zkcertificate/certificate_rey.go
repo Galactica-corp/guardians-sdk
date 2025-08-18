@@ -23,8 +23,8 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/internal/validation"
-	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
+	"github.com/galactica-corp/guardians-sdk/v2/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/hashing"
 )
 
 // REYContent represents the data for the REY verification.

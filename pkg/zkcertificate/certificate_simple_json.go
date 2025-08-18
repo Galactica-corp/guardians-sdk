@@ -23,7 +23,7 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/hashing"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/hashing"
 )
 
 // SimpleJSON represents the input data for data that consists of

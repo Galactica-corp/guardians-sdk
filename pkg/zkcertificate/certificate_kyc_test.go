@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/zkcertificate"
 )
 
 func TestKYCInputs_Validate(t *testing.T) {

@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,9 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/contracts"
-	"github.com/galactica-corp/guardians-sdk/pkg/merkle"
-	"github.com/galactica-corp/guardians-sdk/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/contracts"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/merkle"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/zkcertificate"
 )
 
 type revokeZKCertFlags struct {

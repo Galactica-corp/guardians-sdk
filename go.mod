@@ -1,4 +1,4 @@
-module github.com/galactica-corp/guardians-sdk
+module github.com/galactica-corp/guardians-sdk/v2
 
 go 1.24
 

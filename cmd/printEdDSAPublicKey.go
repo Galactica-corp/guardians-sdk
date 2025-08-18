@@ -23,7 +23,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/pkg/keymanagement"
+	"github.com/galactica-corp/guardians-sdk/v2/pkg/keymanagement"
 )
 
 type printEdDSAPublicKeyFlags struct {

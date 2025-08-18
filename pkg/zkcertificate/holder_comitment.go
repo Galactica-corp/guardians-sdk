@@ -1,4 +1,4 @@
-// Copyright © 2024 Galactica Network
+// Copyright © 2025 Galactica Network
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/galactica-corp/guardians-sdk/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v2/internal/validation"
 )
 
 // HolderCommitment represents a structure containing a commitment hash and an encryption key.
