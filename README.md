@@ -9,7 +9,7 @@ essential tools for tasks such as certificate issuance, revocation, renewal, and
 To install the Galactica Guardian CLI, run the following command:
 
 ```shell
-go install github.com/galactica-corp/guardians-sdk/v2/cmd/galactica-guardian@latest
+go install github.com/galactica-corp/guardians-sdk/v3/cmd/galactica-guardian@latest
 ```
 
 Ensure that your Go environment is properly configured before running the installation command.

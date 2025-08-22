@@ -20,12 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/v2/internal/validation"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/hashing"
+	"github.com/galactica-corp/guardians-sdk/v3/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/hashing"
 )
 
 // KYCContent represents the data for Know Your Customer (KYC) verification.
@@ -189,19 +188,3 @@ const (
 	KYCVerificationLevelPassedKYC
 	KYCVerificationLevelQualifiedInvestor
 )
-
-// UnmarshalText implements [encoding.TextUnmarshaler].
-func (v *KYCVerificationLevel) UnmarshalText(text []byte) error {
-	res, err := strconv.Atoi(string(text))
-	if err != nil {
-		return err
-	}
-
-	*v = KYCVerificationLevel(res)
-	return nil
-}
-
-// MarshalText implements [encoding.TextMarshaler].
-func (v KYCVerificationLevel) MarshalText() (text []byte, err error) {
-	return []byte(strconv.Itoa(int(v))), nil
-}

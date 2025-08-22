@@ -32,10 +32,10 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/v2/internal/cli"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/contracts"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/merkle"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v3/internal/cli"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/contracts"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/merkle"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
 )
 
 type issueZKCertFlags struct {

@@ -24,8 +24,8 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/v2/internal/validation"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/hashing"
+	"github.com/galactica-corp/guardians-sdk/v3/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/hashing"
 )
 
 // TwitterContent represents the data for X/Twitter verification.

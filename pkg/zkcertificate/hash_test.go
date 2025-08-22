@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
 )
 
 func TestHash_Bytes32(t *testing.T) {

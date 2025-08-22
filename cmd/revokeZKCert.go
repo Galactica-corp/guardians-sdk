@@ -28,9 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/contracts"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/merkle"
-	"github.com/galactica-corp/guardians-sdk/v2/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/contracts"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/merkle"
+	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
 )
 
 type revokeZKCertFlags struct {
