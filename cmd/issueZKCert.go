@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/holiman/uint256"
 	"github.com/spf13/cobra"
 
 	"github.com/galactica-corp/guardians-sdk/v3/internal/cli"
@@ -146,13 +145,12 @@ type EthereumIssueClient interface {
 	ChainID(ctx context.Context) (*big.Int, error)
 }
 
-// IssueZKCert registers and issues a zero-knowledge certificate (ZKCert) on-chain.
+// IssueZKCert registers a zero-knowledge certificate (ZKCert) to the on-chain queue.
 //
 // The function performs the following steps:
 //  1. Verifies that the provider is authorized as a guardian.
-//  2. Finds an empty leaf in the Merkle tree for certificate registration.
-//  3. Registers the certificate and waits for the provider's turn to issue it.
-//  4. Constructs and sends the transaction to add the certificate on-chain.
+//  2. Adds the certificate to the queue for processing.
+//  3. Returns the queue position to track the certificate status.
 func IssueZKCert[T zkcertificate.Content](
 	ctx context.Context,
 	cert zkcertificate.Certificate[T],
@@ -187,18 +185,49 @@ func IssueZKCert[T zkcertificate.Content](
 
 	leafHash := cert.LeafHash
 
-	if err := registerAndWaitForZkCertificateTurn(ctx, ethRPC, chainID, providerKey, registry, leafHash); err != nil {
-		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("register and wait for issue turn: %w", err)
-	}
-
-	index, proof, err := findEmptyTreeLeaf(ctx, merkleProofClient, registryAddress)
+	// Add certificate to queue (operation 0 = addition)
+	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
-		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("find empty tree leaf: %w", err)
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
+	auth.Context = ctx
 
-	tx, err := constructIssueZKCertTx(ctx, ethRPC, chainID, providerKey, registryAddress, index, cert, proof)
-	if err != nil {
-		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("construct add record tx: %w", err)
+	var tx *types.Transaction
+
+	// Handle different registry types
+	if cert.Standard == zkcertificate.StandardKYC {
+		// For zkKYC, we need to use the special registry with additional parameters
+		kycRegistry, err := contracts.NewZkKYCRegistry(registryAddress, ethRPC)
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("load kyc registry: %w", err)
+		}
+
+		// Get KYC data from content to get the ID hash
+		kycContent := any(cert.Content).(zkcertificate.KYCContent)
+
+		idHash, err := kycContent.IDHash()
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get id hash: %w", err)
+		}
+
+		// Add to queue with KYC-specific parameters
+		tx, err = kycRegistry.AddOperationToQueue(
+			auth,
+			leafHash.Bytes32(),
+			0, // operation: 0 = addition
+			idHash.BigInt(),
+			cert.HolderCommitment.BigInt(), // salt hash
+			big.NewInt(cert.ExpirationDate.Unix()),
+		)
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("add kyc operation to queue: %w", err)
+		}
+	} else {
+		// For other certificate types, use the standard registry
+		tx, err = registry.AddOperationToQueue(auth, leafHash.Bytes32(), 0)
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("add operation to queue: %w", err)
+		}
 	}
 
 	if receipt, err := bind.WaitMined(ctx, ethRPC, tx); err != nil {
@@ -207,17 +236,33 @@ func IssueZKCert[T zkcertificate.Content](
 		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("transaction %q failed", receipt.TxHash)
 	}
 
-	proof.Leaf = merkle.TreeNode{Value: uint256.MustFromBig(cert.LeafHash.BigInt())}
+	// Get queue position
+	var queuePosition *big.Int
+	if cert.Standard == zkcertificate.StandardKYC {
+		kycRegistry, err := contracts.NewZkKYCRegistry(registryAddress, ethRPC)
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("load kyc registry for queue position: %w", err)
+		}
+		queuePosition, err = kycRegistry.GetQueuePosition(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get kyc queue position: %w", err)
+		}
+	} else {
+		queuePosition, err = registry.GetQueuePosition(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
+		if err != nil {
+			return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get queue position: %w", err)
+		}
+	}
 
 	return tx, zkcertificate.IssuedCertificate[T]{
 		Certificate: cert,
 		Registration: zkcertificate.RegistrationDetails{
-			Address:   registryAddress,
-			ChainID:   chainID,
-			Revocable: true,
-			LeafIndex: index,
+			Address:       registryAddress,
+			ChainID:       chainID,
+			Revocable:     true,
+			QueuePosition: queuePosition,
+			// LeafIndex and MerkleProof will be set later by the queue processor
 		},
-		MerkleProof: proof,
 	}, nil
 }
 
@@ -298,162 +343,6 @@ func ensureProviderIsGuardian(
 
 	if !whitelisted {
 		return fmt.Errorf("provider %s is not a guardian yet", providerAddress)
-	}
-
-	return nil
-}
-
-func findEmptyTreeLeaf(
-	ctx context.Context,
-	client merkle.EmptyLeafProver,
-	registryAddress common.Address,
-) (int, merkle.Proof, error) {
-	emptyLeafIndex, proof, err := merkle.GetEmptyLeafProof(ctx, client, registryAddress.Hex())
-	if err != nil {
-		return 0, merkle.Proof{}, fmt.Errorf("get empty leaf proof: %w", err)
-	}
-
-	return int(emptyLeafIndex), proof, nil
-}
-
-func constructIssueZKCertTx[T zkcertificate.Content](
-	ctx context.Context,
-	client bind.ContractBackend,
-	chainID *big.Int,
-	providerKey *ecdsa.PrivateKey,
-	registryAddress common.Address,
-	leafIndex int,
-	cert zkcertificate.Certificate[T],
-	proof merkle.Proof,
-) (*types.Transaction, error) {
-	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
-	if err != nil {
-		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
-	}
-
-	auth.Context = ctx
-
-	if cert.Standard == zkcertificate.StandardKYC {
-		// For zkCertificate of type zkKYC, the smart contract interface expects a few more parameters
-		recordRegistry, err := contracts.NewZkKYCRegistry(registryAddress, client)
-		if err != nil {
-			return nil, fmt.Errorf("load record registry: %w", err)
-		}
-
-		// get KYC data from content to get the ID hash
-		kycContent := any(cert.Content).(zkcertificate.KYCContent)
-
-		idHash, err := kycContent.IDHash()
-		if err != nil {
-			return nil, fmt.Errorf("get id hash: %w", err)
-		}
-
-		return recordRegistry.AddZkKYC(
-			auth,
-			big.NewInt(int64(leafIndex)),
-			cert.LeafHash.Bytes32(),
-			encodeMerkleProof(proof),
-			idHash.BigInt(),
-			cert.HolderCommitment.BigInt(),
-			big.NewInt(cert.ExpirationDate.Unix()),
-		)
-	} else {
-		recordRegistry, err := contracts.NewZkCertificateRegistry(registryAddress, client)
-		if err != nil {
-			return nil, fmt.Errorf("load record registry: %w", err)
-		}
-
-		return recordRegistry.AddZkCertificate(
-			auth,
-			big.NewInt(int64(leafIndex)),
-			cert.LeafHash.Bytes32(),
-			encodeMerkleProof(proof),
-		)
-	}
-}
-
-func encodeMerkleProof(proof merkle.Proof) [][32]byte {
-	res := make([][32]byte, len(proof.Path))
-
-	for i, node := range proof.Path {
-		res[i] = node.Value.Bytes32()
-	}
-
-	return res
-}
-
-type RecordRegistryQueue interface {
-	CheckZkCertificateHashInQueue(opts *bind.CallOpts, zkCertificateHash [32]byte) (bool, error)
-	RegisterToQueue(opts *bind.TransactOpts, zkCertificateHash [32]byte) (*types.Transaction, error)
-}
-
-func registerToQueue(
-	ctx context.Context,
-	chainID *big.Int,
-	providerKey *ecdsa.PrivateKey,
-	registry RecordRegistryQueue,
-	leafHash zkcertificate.Hash,
-) (*types.Transaction, error) {
-	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
-	if err != nil {
-		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
-	}
-
-	auth.Context = ctx
-
-	tx, err := registry.RegisterToQueue(auth, leafHash.Bytes32())
-	if err != nil {
-		exists, checkErr := registry.CheckZkCertificateHashInQueue(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
-		if checkErr != nil {
-			return nil, fmt.Errorf("register to queue failed: %w, also failed to check if zkCertificateHash is in queue: %w", err, checkErr)
-		}
-		if exists {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("register to queue failed: %w", err)
-	}
-
-	return tx, nil
-}
-
-func registerAndWaitForZkCertificateTurn(
-	ctx context.Context,
-	client bind.DeployBackend,
-	chainID *big.Int,
-	providerKey *ecdsa.PrivateKey,
-	registry RecordRegistryQueue,
-	leafHash zkcertificate.Hash,
-) error {
-	registerTx, err := registerToQueue(ctx, chainID, providerKey, registry, leafHash)
-	if err != nil {
-		return fmt.Errorf("register zkCertificate hash to queue: %w", err)
-	}
-
-	if registerTx != nil {
-		receipt, err := bind.WaitMined(ctx, client, registerTx)
-		if err != nil {
-			return fmt.Errorf("wait until queue registration transaction is mined: %w", err)
-		}
-		if receipt.Status == 0 {
-			return fmt.Errorf("queue registration transaction %q failed", receipt.TxHash)
-		}
-	}
-
-	for {
-		myTurn, err := registry.CheckZkCertificateHashInQueue(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
-		if err != nil {
-			return fmt.Errorf("retrieve zkCertificate hash to check: %w", err)
-		}
-
-		if myTurn {
-			break
-		}
-
-		select {
-		case <-time.After(5 * time.Second):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
 	}
 
 	return nil

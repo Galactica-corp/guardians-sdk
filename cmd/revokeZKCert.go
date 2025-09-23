@@ -127,13 +127,12 @@ type EthereumRevokeClient interface {
 	ChainID(ctx context.Context) (*big.Int, error)
 }
 
-// RevokeZKCert revokes an issued zero-knowledge certificate (ZKCert) by removing it from the blockchain registry.
+// RevokeZKCert adds a revocation request to the on-chain queue for a zero-knowledge certificate (ZKCert).
 //
 // The function performs the following steps:
 //  1. Verifies that the provider is authorized as a guardian.
-//  2. Retrieves the Merkle proof for the certificate to be revoked.
-//  3. Registers the provider for revocation and waits for its turn.
-//  4. Constructs and sends the transaction to revoke the certificate.
+//  2. Adds the revocation request to the queue for processing.
+//  3. Returns the transaction that added the revocation to the queue.
 func RevokeZKCert[T zkcertificate.Content](
 	ctx context.Context,
 	certificate zkcertificate.IssuedCertificate[T],
@@ -161,20 +160,49 @@ func RevokeZKCert[T zkcertificate.Content](
 
 	leafHash := certificate.LeafHash
 
-	if err := registerAndWaitForZkCertificateTurn(ctx, client, chainID, providerKey, registry, leafHash); err != nil {
-		return nil, fmt.Errorf("register and wait for zkCertificate turn: %w", err)
-	}
-
-	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
+	// Add revocation to queue (operation 1 = revocation)
+	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
-		return nil, fmt.Errorf("get merkle proof: %w", err)
+		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
 	}
+	auth.Context = ctx
 
-	leafIndex := certificate.Registration.LeafIndex
+	var tx *types.Transaction
 
-	tx, err := constructRevokeZKCertTx(ctx, chainID, providerKey, registry, leafIndex, leafHash, proof)
-	if err != nil {
-		return nil, fmt.Errorf("construct transaction to revoke record from registry: %w", err)
+	// Handle different registry types
+	if certificate.Standard == zkcertificate.StandardKYC {
+		// For zkKYC, we need to use the special registry with additional parameters
+		kycRegistry, err := contracts.NewZkKYCRegistry(registryAddress, client)
+		if err != nil {
+			return nil, fmt.Errorf("load kyc registry: %w", err)
+		}
+
+		// Get KYC data from content to get the ID hash
+		kycContent := any(certificate.Content).(zkcertificate.KYCContent)
+
+		idHash, err := kycContent.IDHash()
+		if err != nil {
+			return nil, fmt.Errorf("get id hash: %w", err)
+		}
+
+		// For revocation, we still need to provide these parameters even though they may not be used
+		tx, err = kycRegistry.AddOperationToQueue(
+			auth,
+			leafHash.Bytes32(),
+			1, // operation: 1 = revocation
+			idHash.BigInt(),
+			certificate.HolderCommitment.BigInt(), // salt hash
+			big.NewInt(certificate.ExpirationDate.Unix()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("add kyc revocation to queue: %w", err)
+		}
+	} else {
+		// For other certificate types, use the standard registry
+		tx, err = registry.AddOperationToQueue(auth, leafHash.Bytes32(), 1)
+		if err != nil {
+			return nil, fmt.Errorf("add revocation to queue: %w", err)
+		}
 	}
 
 	if receipt, err := bind.WaitMined(ctx, client, tx); err != nil {
@@ -184,37 +212,4 @@ func RevokeZKCert[T zkcertificate.Content](
 	}
 
 	return tx, nil
-}
-
-type RecordRegistryCertificateRevoker interface {
-	RevokeZkCertificate(
-		opts *bind.TransactOpts,
-		leafIndex *big.Int,
-		zkCertificateHash [32]byte,
-		merkleProof [][32]byte,
-	) (*types.Transaction, error)
-}
-
-func constructRevokeZKCertTx(
-	ctx context.Context,
-	chainID *big.Int,
-	providerKey *ecdsa.PrivateKey,
-	recordRegistry RecordRegistryCertificateRevoker,
-	leafIndex int,
-	leafHash zkcertificate.Hash,
-	proof merkle.Proof,
-) (*types.Transaction, error) {
-	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
-	if err != nil {
-		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
-	}
-
-	auth.Context = ctx
-
-	return recordRegistry.RevokeZkCertificate(
-		auth,
-		big.NewInt(int64(leafIndex)),
-		leafHash.Bytes32(),
-		encodeMerkleProof(proof),
-	)
 }
