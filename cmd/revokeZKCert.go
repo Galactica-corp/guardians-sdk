@@ -160,7 +160,7 @@ func RevokeZKCert[T zkcertificate.Content](
 
 	leafHash := certificate.LeafHash
 
-	// Add revocation to queue (operation 1 = revocation)
+	// Add revocation to queue
 	auth, err := bind.NewKeyedTransactorWithChainID(providerKey, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("create transaction signer from private key: %w", err)
@@ -189,7 +189,7 @@ func RevokeZKCert[T zkcertificate.Content](
 		tx, err = kycRegistry.AddOperationToQueue(
 			auth,
 			leafHash.Bytes32(),
-			1, // operation: 1 = revocation
+			OperationRevocation,
 			idHash.BigInt(),
 			certificate.HolderCommitment.BigInt(), // salt hash
 			big.NewInt(certificate.ExpirationDate.Unix()),
@@ -199,7 +199,7 @@ func RevokeZKCert[T zkcertificate.Content](
 		}
 	} else {
 		// For other certificate types, use the standard registry
-		tx, err = registry.AddOperationToQueue(auth, leafHash.Bytes32(), 1)
+		tx, err = registry.AddOperationToQueue(auth, leafHash.Bytes32(), OperationRevocation)
 		if err != nil {
 			return nil, fmt.Errorf("add revocation to queue: %w", err)
 		}
