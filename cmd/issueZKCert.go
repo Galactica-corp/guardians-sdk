@@ -42,9 +42,15 @@ const (
 	// Registry operation constants
 	OperationAddition   = 0
 	OperationRevocation = 1
-	
+
+	// Certificate state constants
+	CertificateStateIssuanceQueued   = 1
+	CertificateStateIssued           = 2
+	CertificateStateRevocationQueued = 3
+	CertificateStateRevoked          = 4
+
 	// Retry configuration for Merkle proof service
-	MerkleProofRetryAttempts = 12 // Number of retry attempts
+	MerkleProofRetryAttempts = 60              // Number of retry attempts (5 minutes total)
 	MerkleProofRetryDelay    = 5 * time.Second // Delay between retries
 )
 
@@ -309,20 +315,26 @@ func IssueZKCert[T zkcertificate.Content](
 				if err != nil {
 					return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get certificate processing data: %w", err)
 				}
-				// Check if state is processed (state > 0 means processed)
-				if certData.State > 0 {
+				// Check if state indicates actual processing (not just queued)
+				switch certData.State {
+				case CertificateStateIssued:
 					processed = true
-					fmt.Fprintf(os.Stderr, "Certificate state: %d (processed)\n", certData.State)
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (issued)\n", certData.State)
+				case CertificateStateIssuanceQueued:
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (queued for issuance, waiting for processor)\n", certData.State)
 				}
 			} else {
 				certData, err := registry.ZkCertificateProcessingData(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
 				if err != nil {
 					return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get certificate processing data: %w", err)
 				}
-				// Check if state is processed (state > 0 means processed)
-				if certData.State > 0 {
+				// Check if state indicates actual processing (not just queued)
+				switch certData.State {
+				case CertificateStateIssued:
 					processed = true
-					fmt.Fprintf(os.Stderr, "Certificate state: %d (processed)\n", certData.State)
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (issued)\n", certData.State)
+				case CertificateStateIssuanceQueued:
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (queued for issuance, waiting for processor)\n", certData.State)
 				}
 			}
 		}
@@ -345,7 +357,7 @@ func IssueZKCert[T zkcertificate.Content](
 			// Success
 			break
 		}
-		
+
 		// Check if it's a sync error (Merkle proof service not yet caught up)
 		errStr := proofErr.Error()
 		if strings.Contains(errStr, "FailedPrecondition") && strings.Contains(errStr, "registry indexer is not on head") {
