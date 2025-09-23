@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -41,6 +42,10 @@ const (
 	// Registry operation constants
 	OperationAddition   = 0
 	OperationRevocation = 1
+	
+	// Retry configuration for Merkle proof service
+	MerkleProofRetryAttempts = 12 // Number of retry attempts
+	MerkleProofRetryDelay    = 5 * time.Second // Delay between retries
 )
 
 type issueZKCertFlags struct {
@@ -291,10 +296,10 @@ func IssueZKCert[T zkcertificate.Content](
 			}
 		}
 
-		// Check if our certificate has been processed
-		if currentPointer.Cmp(queuePosition) > 0 {
-			// Our certificate should have been processed
-			// Get the certificate data to confirm
+		// Check if our certificate might have been processed
+		// If currentPointer >= queuePosition, check the certificate state
+		if currentPointer.Cmp(queuePosition) >= 0 {
+			// Check the certificate state to confirm if it's processed
 			if cert.Standard == zkcertificate.StandardKYC {
 				kycRegistry, err := contracts.NewZkKYCRegistry(registryAddress, ethRPC)
 				if err != nil {
@@ -304,32 +309,58 @@ func IssueZKCert[T zkcertificate.Content](
 				if err != nil {
 					return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get certificate processing data: %w", err)
 				}
-				// Check if state is processed
+				// Check if state is processed (state > 0 means processed)
 				if certData.State > 0 {
 					processed = true
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (processed)\n", certData.State)
 				}
 			} else {
 				certData, err := registry.ZkCertificateProcessingData(&bind.CallOpts{Context: ctx}, leafHash.Bytes32())
 				if err != nil {
 					return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get certificate processing data: %w", err)
 				}
-				// Check if state is processed
+				// Check if state is processed (state > 0 means processed)
 				if certData.State > 0 {
 					processed = true
+					fmt.Fprintf(os.Stderr, "Certificate state: %d (processed)\n", certData.State)
 				}
 			}
 		}
 
 		if !processed {
 			fmt.Fprintf(os.Stderr, "Current queue position: %s, waiting for position: %s\n", currentPointer, queuePosition)
-			time.Sleep(5 * time.Second)
+			time.Sleep(MerkleProofRetryDelay)
 		}
 	}
 
 	// Get Merkle proof for the processed certificate
-	proof, err := merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
-	if err != nil {
-		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get merkle proof: %w", err)
+	// Retry if the Merkle proof service is not yet synchronized
+	fmt.Fprintf(os.Stderr, "Certificate processed. Retrieving Merkle proof...\n")
+
+	var proof merkle.Proof
+	var proofErr error
+	for i := range MerkleProofRetryAttempts {
+		proof, proofErr = merkle.GetProof(ctx, merkleProofClient, registryAddress.Hex(), leafHash.String())
+		if proofErr == nil {
+			// Success
+			break
+		}
+		
+		// Check if it's a sync error (Merkle proof service not yet caught up)
+		errStr := proofErr.Error()
+		if strings.Contains(errStr, "FailedPrecondition") && strings.Contains(errStr, "registry indexer is not on head") {
+			if i < MerkleProofRetryAttempts-1 { // Don't sleep on the last iteration
+				fmt.Fprintf(os.Stderr, "Merkle proof service is syncing, retrying in %v...\n", MerkleProofRetryDelay)
+				time.Sleep(MerkleProofRetryDelay)
+			}
+			continue
+		}
+		// For other errors, fail immediately
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get merkle proof: %w", proofErr)
+	}
+
+	if proofErr != nil {
+		return nil, zkcertificate.IssuedCertificate[T]{}, fmt.Errorf("get merkle proof after %d retries: %w", MerkleProofRetryAttempts, proofErr)
 	}
 
 	return tx, zkcertificate.IssuedCertificate[T]{
