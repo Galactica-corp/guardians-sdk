@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
@@ -59,12 +58,13 @@ func (r *REYContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (r REYContent) Hash() (Hash, error) {
-	idHash, err := hashing.HashBytes([]byte(r.XID))
-	if err != nil {
-		return Hash{}, fmt.Errorf("hash xid: %w", err)
+	// Convert XID string to big.Int directly (TypeScript compatibility)
+	xidBigInt := new(big.Int)
+	if _, success := xidBigInt.SetString(r.XID, 10); !success {
+		return Hash{}, fmt.Errorf("invalid XID format: %s", r.XID)
 	}
 
-	usernameHash, err := hashing.HashBytes([]byte(strings.ToLower(r.XUsername)))
+	usernameHash, err := hashing.HashBytes([]byte(r.XUsername))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash username: %w", err)
 	}
@@ -74,7 +74,7 @@ func (r REYContent) Hash() (Hash, error) {
 		new(big.Int).SetUint64(uint64(r.REYFaction)),
 		new(big.Int).SetUint64(uint64(r.REYScoreAll)),
 		new(big.Int).SetUint64(uint64(r.REYScoreGalactica)),
-		idHash,
+		xidBigInt, // Use XID as BigInt directly, not hashed
 		usernameHash,
 	})
 	if err != nil {

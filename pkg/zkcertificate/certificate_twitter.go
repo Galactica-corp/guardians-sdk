@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
@@ -63,12 +62,13 @@ func (t *TwitterContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (t TwitterContent) Hash() (Hash, error) {
-	idHash, err := hashing.HashBytes([]byte(t.ID))
-	if err != nil {
-		return Hash{}, fmt.Errorf("hash ID: %w", err)
+	// Convert ID string to big.Int directly (TypeScript compatibility)
+	idBigInt := new(big.Int)
+	if _, success := idBigInt.SetString(t.ID, 10); !success {
+		return Hash{}, fmt.Errorf("invalid ID format: %s", t.ID)
 	}
 
-	usernameHash, err := hashing.HashBytes([]byte(strings.ToLower(t.Username)))
+	usernameHash, err := hashing.HashBytes([]byte(t.Username))
 	if err != nil {
 		return Hash{}, fmt.Errorf("hash username: %w", err)
 	}
@@ -85,7 +85,7 @@ func (t TwitterContent) Hash() (Hash, error) {
 		big.NewInt(t.CreatedAt.Unix()),
 		new(big.Int).SetUint64(uint64(t.FollowersCount)),
 		new(big.Int).SetUint64(uint64(t.FollowingCount)),
-		idHash,
+		idBigInt, // Use ID as BigInt directly, not hashed
 		new(big.Int).SetUint64(uint64(t.ListedCount)),
 		new(big.Int).SetUint64(uint64(t.TweetCount)),
 		usernameHash,
