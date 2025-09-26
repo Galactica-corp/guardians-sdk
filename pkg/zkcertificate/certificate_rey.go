@@ -58,7 +58,6 @@ func (r *REYContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (r REYContent) Hash() (Hash, error) {
-	// Convert XID string to big.Int directly (TypeScript compatibility)
 	xidBigInt := new(big.Int)
 	if _, success := xidBigInt.SetString(r.XID, 10); !success {
 		return Hash{}, fmt.Errorf("invalid XID format: %s", r.XID)
@@ -74,7 +73,7 @@ func (r REYContent) Hash() (Hash, error) {
 		new(big.Int).SetUint64(uint64(r.REYFaction)),
 		new(big.Int).SetUint64(uint64(r.REYScoreAll)),
 		new(big.Int).SetUint64(uint64(r.REYScoreGalactica)),
-		xidBigInt, // Use XID as BigInt directly, not hashed
+		xidBigInt,
 		usernameHash,
 	})
 	if err != nil {

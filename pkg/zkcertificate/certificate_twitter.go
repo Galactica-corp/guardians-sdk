@@ -62,7 +62,6 @@ func (t *TwitterContent) UnmarshalJSON(data []byte) error {
 
 // Hash implements Content.
 func (t TwitterContent) Hash() (Hash, error) {
-	// Convert ID string to big.Int directly (TypeScript compatibility)
 	idBigInt := new(big.Int)
 	if _, success := idBigInt.SetString(t.ID, 10); !success {
 		return Hash{}, fmt.Errorf("invalid ID format: %s", t.ID)
@@ -85,7 +84,7 @@ func (t TwitterContent) Hash() (Hash, error) {
 		big.NewInt(t.CreatedAt.Unix()),
 		new(big.Int).SetUint64(uint64(t.FollowersCount)),
 		new(big.Int).SetUint64(uint64(t.FollowingCount)),
-		idBigInt, // Use ID as BigInt directly, not hashed
+		idBigInt,
 		new(big.Int).SetUint64(uint64(t.ListedCount)),
 		new(big.Int).SetUint64(uint64(t.TweetCount)),
 		usernameHash,
