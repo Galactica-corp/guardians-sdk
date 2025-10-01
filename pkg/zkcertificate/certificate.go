@@ -28,8 +28,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/encryption"
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/merkle"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/encryption"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/merkle"
 )
 
 var eddsaPrimeFieldMod, _ = new(big.Int).SetString("2736030358979909402780800718157159386076813972158567259200215660948447373040", 10)

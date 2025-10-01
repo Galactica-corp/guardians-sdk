@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/zkcertificate"
 )
 
 func TestSimpleJSON_Validate(t *testing.T) {

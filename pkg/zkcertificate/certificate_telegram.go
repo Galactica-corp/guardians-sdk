@@ -23,7 +23,7 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 
-	"github.com/galactica-corp/guardians-sdk/v3/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v4/internal/validation"
 )
 
 // TelegramContent represents the data for verification of a Telegram account.

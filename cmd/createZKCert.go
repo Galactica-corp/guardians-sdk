@@ -26,8 +26,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/spf13/cobra"
 
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/keymanagement"
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/keymanagement"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/zkcertificate"
 )
 
 type createZKCertFlags struct {

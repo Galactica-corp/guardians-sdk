@@ -24,8 +24,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/v2/poseidon"
 	"github.com/shopspring/decimal"
 
-	"github.com/galactica-corp/guardians-sdk/v3/internal/validation"
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/hashing"
+	"github.com/galactica-corp/guardians-sdk/v4/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/hashing"
 )
 
 // DEXContent represent the data for verification of trading on a decentralized exchange.

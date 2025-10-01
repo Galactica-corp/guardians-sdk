@@ -18,7 +18,7 @@ package main
 import (
 	"os"
 
-	"github.com/galactica-corp/guardians-sdk/v3/cmd"
+	"github.com/galactica-corp/guardians-sdk/v4/cmd"
 )
 
 func main() {

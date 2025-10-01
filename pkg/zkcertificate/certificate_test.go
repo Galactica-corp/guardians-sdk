@@ -22,7 +22,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/v2/babyjub"
 	"github.com/stretchr/testify/require"
 
-	"github.com/galactica-corp/guardians-sdk/v3/pkg/zkcertificate"
+	"github.com/galactica-corp/guardians-sdk/v4/pkg/zkcertificate"
 )
 
 func TestSignCertificate(t *testing.T) {

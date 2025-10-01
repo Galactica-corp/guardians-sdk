@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/galactica-corp/guardians-sdk/v3/internal/validation"
+	"github.com/galactica-corp/guardians-sdk/v4/internal/validation"
 )
 
 // HolderCommitment represents a structure containing a commitment hash and an encryption key.
