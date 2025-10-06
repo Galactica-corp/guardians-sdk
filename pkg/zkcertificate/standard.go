@@ -31,6 +31,7 @@ const (
 	StandardDEX        Standard = "gip5"
 	StandardCEX        Standard = "gip6"
 	StandardTelegram   Standard = "gip7"
+	StandardBlum       Standard = "gip8"
 )
 
 var allStandards = []string{
@@ -41,6 +42,7 @@ var allStandards = []string{
 	StandardDEX.String(),
 	StandardCEX.String(),
 	StandardTelegram.String(),
+	StandardBlum.String(),
 }
 
 // IsStandard returns true if given value is a valid Standard.
